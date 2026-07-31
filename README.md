@@ -5,6 +5,13 @@ Sync audio you are authorized to use from YouTube videos or playlists to Yoto MY
 Requirements: Node.js 22+, `yt-dlp`, `ffmpeg`, and a Yoto Developer client ID with content-management access.
 
 ```console
+# macOS: install runtime and media tools
+brew install node yt-dlp ffmpeg
+
+# Install this CLI and make `yoto-sync` available in your shell
+npm install
+npm link
+
 cp .env.example .env
 # Set YOTO_CLIENT_ID in .env, then authenticate in the browser when prompted.
 yoto-sync login
