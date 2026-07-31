@@ -1,0 +1,49 @@
+import { mkdir, rm } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", (error) => reject(new Error(`Could not run ${command}: ${error.message}`)));
+    child.on("close", (code) => {
+      if (code === 0) return resolve(stdout);
+      reject(new Error(`${command} failed: ${stderr.trim() || `exit ${code}`}`));
+    });
+  });
+}
+
+export async function listTracks(url) {
+  let result;
+  try {
+    result = JSON.parse(await run("yt-dlp", ["--flat-playlist", "--dump-single-json", "--no-warnings", url]));
+  } catch (error) {
+    throw new Error(`Could not read ${url}: ${error.message}`);
+  }
+
+  const entries = result.entries || [result];
+  return entries
+    .filter((entry) => entry?.id && (entry.webpage_url || entry.url))
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.title || entry.id,
+      url: entry.webpage_url || entry.url,
+      duration: Number(entry.duration) || 0,
+    }));
+}
+
+export async function downloadTrack(track) {
+  const directory = await mkdir(join(tmpdir(), "yoto-sync"), { recursive: true }).then(() => join(tmpdir(), "yoto-sync"));
+  const path = join(directory, `${track.id}.mp3`);
+  await run("yt-dlp", ["--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
+  return path;
+}
+
+export async function removeDownload(path) {
+  await rm(path, { force: true });
+}
