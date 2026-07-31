@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
+import { loadEnvFile } from "node:process";
 import { configPath, loadConfig, loadState, saveConfig, saveState, statePath } from "./storage.js";
 import { createYoto, listCards, addTrackToCard, uploadTrack } from "./yoto.js";
 import { downloadTrack, listTracks, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
+import { savedTokens, startDeviceAuthorization, validTokens, waitForAuthorization } from "./auth.js";
+
+try {
+  loadEnvFile(".env");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
 
 const help = `Usage: yoto-sync <command> [options]
 
 Commands:
-  init                              Save YOTO_JWT from the environment
-  login                             Same as init
+  init | login                      Authenticate using YOTO_CLIENT_ID from .env
   cards                             List available Yoto cards
   profile add <name> --card <id>    Add a card profile
   profile list | remove <name>      List or remove profiles
@@ -56,10 +63,14 @@ export async function main(args = process.argv.slice(2), environment = process.e
 
   const config = await loadConfig();
   if (command === "init" || command === "login") {
-    if (!environment.YOTO_JWT) fail("Set YOTO_JWT to a Yoto API JWT before running init.");
-    config.token = environment.YOTO_JWT;
+    const clientId = environment.YOTO_CLIENT_ID || config.auth?.clientId;
+    if (!clientId) fail("Set YOTO_CLIENT_ID in .env before logging in.");
+    const device = await startDeviceAuthorization(clientId);
+    console.log(`Open ${device.verification_uri_complete || device.verification_uri} and enter code ${device.user_code}.`);
+    const tokens = await waitForAuthorization(clientId, device);
+    config.auth = savedTokens(clientId, tokens);
     await saveConfig(config);
-    return console.log(`Saved token in ${configPath}`);
+    return console.log(`Authenticated. Tokens are saved in ${configPath}`);
   }
   if (command === "config") {
     if (action === "path") return console.log(configPath);
@@ -97,7 +108,12 @@ export async function main(args = process.argv.slice(2), environment = process.e
     return console.table(entries.map(([name, profile]) => ({ name, cardId: profile.cardId, sources: profile.sources.length })));
   }
 
-  const yoto = createYoto(config.token);
+  const auth = await validTokens(config.auth);
+  if (auth !== config.auth) {
+    config.auth = auth;
+    await saveConfig(config);
+  }
+  const yoto = createYoto(auth.accessToken);
   if (command === "cards") return console.table(await listCards(yoto));
   if (command !== "sync") fail(`Unknown command: ${command}`);
   if (values.all && values.profile) fail("Use either --all or --profile, not both.");

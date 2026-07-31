@@ -5,7 +5,7 @@ import { createYotoSdk } from "@yotoplay/yoto-sdk";
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export function createYoto(token) {
-  if (!token) throw new Error("Set YOTO_JWT, then run `yoto-sync init`.");
+  if (!token) throw new Error("Run `yoto-sync login` first.");
   return createYotoSdk({ jwt: token });
 }
 
