@@ -1,8 +1,12 @@
-const authDomain = "https://login.yotoplay.com/oauth";
-const audience = "https://api.yotoplay.com";
+import { createHash, randomBytes } from "node:crypto";
+import { createServer } from "node:http";
 
-async function requestToken(path, values, request = fetch) {
-  const response = await request(`${authDomain}/${path}`, {
+const authDomain = "https://login.yotoplay.com";
+const audience = "https://api.yotoplay.com";
+export const redirectUri = "http://127.0.0.1:8787/callback";
+
+async function requestToken(values, request = fetch) {
+  const response = await request(`${authDomain}/oauth/token`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(values),
@@ -16,35 +20,56 @@ async function requestToken(path, values, request = fetch) {
   return body;
 }
 
-export async function startDeviceAuthorization(clientId, request = fetch) {
-  return requestToken("device/code", {
-    client_id: clientId,
-    scope: "offline_access",
-    audience,
-  }, request);
+function base64Url(value) {
+  return value.toString("base64url");
 }
 
-export async function waitForAuthorization(clientId, device, request = fetch, sleep = setTimeout) {
-  const deadline = Date.now() + (device.expires_in * 1000);
-  let interval = (device.interval || 5) * 1000;
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => sleep(resolve, interval));
-    try {
-      return await requestToken("token", {
-        grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-        device_code: device.device_code,
-        client_id: clientId,
-      }, request);
-    } catch (error) {
-      if (error.code === "authorization_pending") continue;
-      if (error.code === "slow_down") {
-        interval += 5000;
-        continue;
+export function startAuthorization(clientId) {
+  const verifier = base64Url(randomBytes(32));
+  const challenge = base64Url(createHash("sha256").update(verifier).digest());
+  const url = new URL(`${authDomain}/authorize`);
+  url.search = new URLSearchParams({
+    audience,
+    scope: "offline_access",
+    response_type: "code",
+    client_id: clientId,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    redirect_uri: redirectUri,
+  }).toString();
+  return { verifier, url: url.toString() };
+}
+
+export function waitForAuthorizationCode() {
+  return new Promise((resolve, reject) => {
+    const server = createServer((request, response) => {
+      const url = new URL(request.url, redirectUri);
+      if (url.pathname !== "/callback") {
+        response.writeHead(404).end();
+        return;
       }
-      throw error;
-    }
-  }
-  throw new Error("Yoto login expired before authorization completed.");
+      const code = url.searchParams.get("code");
+      const error = url.searchParams.get("error");
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end("<p>Yoto login complete. You can close this tab.</p>");
+      server.close();
+      if (error) reject(new Error(`Yoto login failed: ${error}`));
+      else if (code) resolve(code);
+      else reject(new Error("Yoto login returned no authorization code."));
+    });
+    server.once("error", reject);
+    server.listen(8787, "127.0.0.1");
+  });
+}
+
+export function exchangeAuthorizationCode(clientId, code, verifier, request = fetch) {
+  return requestToken({
+    grant_type: "authorization_code",
+    client_id: clientId,
+    code_verifier: verifier,
+    code,
+    redirect_uri: redirectUri,
+  }, request);
 }
 
 export async function validTokens(auth, request = fetch) {
@@ -52,7 +77,7 @@ export async function validTokens(auth, request = fetch) {
   if (Date.now() < auth.expiresAt - 60_000) return auth;
   if (!auth.refreshToken) throw new Error("Yoto login expired; run `yoto-sync login` again.");
 
-  const refreshed = await requestToken("token", {
+  const refreshed = await requestToken({
     grant_type: "refresh_token",
     refresh_token: auth.refreshToken,
     client_id: auth.clientId,

@@ -13,7 +13,9 @@ npm install
 npm link
 
 cp .env.example .env
-# Set YOTO_CLIENT_ID in .env, then authenticate in the browser when prompted.
+# Set YOTO_CLIENT_ID in .env. In the Yoto Developer Dashboard, create a Public
+# Client and register http://127.0.0.1:8787/callback as its redirect URL.
+# Run login on the computer where you open the browser.
 yoto-sync login
 yoto-sync cards
 yoto-sync profile add bedtime --card CARD_ID
