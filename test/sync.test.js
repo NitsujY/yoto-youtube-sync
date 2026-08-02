@@ -4,8 +4,12 @@ import { syncProfile } from "../src/sync.js";
 
 test("sync uploads only tracks not already in state", async () => {
   const calls = [];
+  const listed = [];
   const services = {
-    listTracks: async () => [{ id: "old", title: "Old" }, { id: "new", title: "New" }],
+    listTracks: async (url, limit) => {
+      listed.push({ url, limit });
+      return [{ id: "old", title: "Old" }, { id: "new", title: "New" }];
+    },
     downloadTrack: async (track) => `${track.id}.mp3`,
     uploadTrack: async (path) => `yoto:#${path}`,
     addTrackToCard: async (cardId, track, mediaUrl) => calls.push({ cardId, track, mediaUrl }),
@@ -13,9 +17,10 @@ test("sync uploads only tracks not already in state", async () => {
   };
   const knownIds = new Set(["old"]);
 
-  const result = await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, knownIds, services);
+  const result = await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, knownIds, services, { limit: 10 });
 
   assert.deepEqual(result.uploaded.map((track) => track.id), ["new"]);
+  assert.deepEqual(listed, [{ url: "https://youtube.com/playlist", limit: 10 }]);
   assert.deepEqual(calls, [{ cardId: "card-1", track: { id: "new", title: "New" }, mediaUrl: "yoto:#new.mp3" }]);
   assert.deepEqual([...knownIds], ["old", "new"]);
 });

@@ -21,6 +21,8 @@ yoto-sync cards
 yoto-sync profile add bedtime --card CARD_ID
 yoto-sync add --profile bedtime 'https://www.youtube.com/playlist?list=...'
 yoto-sync sync --profile bedtime
+# Limit a channel or playlist to its newest 10 videos
+yoto-sync sync --profile bedtime --limit 10
 ```
 
 Run `yoto-sync --help` for all commands. Schedule `yoto-sync sync --all` with cron or launchd.

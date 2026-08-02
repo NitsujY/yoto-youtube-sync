@@ -18,10 +18,13 @@ function run(command, args) {
   });
 }
 
-export async function listTracks(url) {
+export async function listTracks(url, limit) {
   let result;
   try {
-    result = JSON.parse(await run("yt-dlp", ["--flat-playlist", "--dump-single-json", "--no-warnings", url]));
+    const args = ["--flat-playlist", "--dump-single-json", "--no-warnings"];
+    if (limit) args.push("--playlist-end", String(limit));
+    args.push(url);
+    result = JSON.parse(await run("yt-dlp", args));
   } catch (error) {
     throw new Error(`Could not read ${url}: ${error.message}`);
   }

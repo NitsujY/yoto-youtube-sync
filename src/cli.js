@@ -23,7 +23,8 @@ Commands:
   add --profile <name> <url>        Add a YouTube video or playlist
   remove --profile <name> <url>     Remove a source
   sources --profile <name>          List sources
-  sync [--profile <name>|--all]     Sync one or all profiles
+  sync [--profile <name>|--all] [--limit <count>]
+                                    Sync one or all profiles
   status [--profile <name>]         Show configured profiles
   config path | show                Show local configuration
 
@@ -48,6 +49,7 @@ function optionsFor(args) {
       all: { type: "boolean" },
       "dry-run": { type: "boolean" },
       force: { type: "boolean" },
+      limit: { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "V" },
     },
@@ -118,6 +120,8 @@ export async function main(args = process.argv.slice(2), environment = process.e
   if (command === "cards") return console.table(await listCards(yoto));
   if (command !== "sync") fail(`Unknown command: ${command}`);
   if (values.all && values.profile) fail("Use either --all or --profile, not both.");
+  if (values.limit && !/^[1-9]\d*$/.test(values.limit)) fail("Use a positive integer for --limit.");
+  const limit = values.limit && Number(values.limit);
 
   const names = values.profile ? [values.profile] : Object.keys(config.profiles);
   if (!names.length) fail("Add a profile before syncing.");
@@ -139,6 +143,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
     const result = await syncProfile(profile, knownIds, services, {
       dryRun: values["dry-run"],
       force: values.force,
+      limit,
       onUploaded: saveProgress,
     });
     if (!values["dry-run"]) state.profiles[name] = { ids: [...knownIds] };

@@ -1,7 +1,7 @@
 export async function syncProfile(profile, knownIds, services, options = {}) {
   const tracks = [];
   for (const source of profile.sources) {
-    tracks.push(...await services.listTracks(source));
+    tracks.push(...await services.listTracks(source, options.limit));
   }
 
   const pending = tracks.filter((track) => options.force || !knownIds.has(track.id));
