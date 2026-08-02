@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 
 const authDomain = "https://login.yotoplay.com";
 const audience = "https://api.yotoplay.com";
+const scope = "family:library:manage user:content:manage offline_access";
 export const redirectUri = "http://127.0.0.1:8787/callback";
 
 async function requestToken(values, request = fetch) {
@@ -30,7 +31,7 @@ export function startAuthorization(clientId) {
   const url = new URL(`${authDomain}/authorize`);
   url.search = new URLSearchParams({
     audience,
-    scope: "offline_access",
+    scope,
     response_type: "code",
     client_id: clientId,
     code_challenge: challenge,
