@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - Dockerfile
+      - Dockerfile.worker
       - package.json
       - package-lock.json
       - src/**
@@ -30,3 +31,9 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/nitsujy/yoto-sync:latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.worker
+          push: true
+          tags: ghcr.io/nitsujy/yoto-sync-worker:latest
