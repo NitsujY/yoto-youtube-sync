@@ -43,7 +43,7 @@ export async function listTracks(url, limit) {
 export async function downloadTrack(track) {
   const directory = await mkdir(join(tmpdir(), "yoto-sync"), { recursive: true }).then(() => join(tmpdir(), "yoto-sync"));
   const path = join(directory, `${track.id}.mp3`);
-  await run("yt-dlp", ["--js-runtimes", "node", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
+  await run("yt-dlp", ["--js-runtimes", "node", "--extractor-args", "youtube:player_client=android", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
   return path;
 }
 
