@@ -19,7 +19,7 @@ export async function uploadTrack(yoto, path) {
   const upload = await yoto.media.getUploadUrlForTranscode(sha256, "track.mp3");
   await yoto.media.uploadFile(upload.uploadUrl, audio);
 
-  for (let attempt = 0; attempt < 120; attempt += 1) {
+  for (let attempt = 0; attempt < 400; attempt += 1) {
     const transcode = await yoto.media.getTranscodedUpload(upload.uploadId, true);
     if (transcode.status === "complete" && transcode.url) return transcode.url;
     if (transcode.status === "failed") throw new Error("Yoto could not transcode the uploaded audio.");
