@@ -21,7 +21,7 @@ function run(command, args) {
 export async function listTracks(url, limit) {
   let result;
   try {
-    const args = ["--flat-playlist", "--dump-single-json", "--no-warnings"];
+    const args = ["--js-runtimes", "node", "--flat-playlist", "--dump-single-json", "--no-warnings"];
     if (limit) args.push("--playlist-end", String(limit));
     args.push(url);
     result = JSON.parse(await run("yt-dlp", args));
@@ -43,7 +43,7 @@ export async function listTracks(url, limit) {
 export async function downloadTrack(track) {
   const directory = await mkdir(join(tmpdir(), "yoto-sync"), { recursive: true }).then(() => join(tmpdir(), "yoto-sync"));
   const path = join(directory, `${track.id}.mp3`);
-  await run("yt-dlp", ["--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
+  await run("yt-dlp", ["--js-runtimes", "node", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
   return path;
 }
 
