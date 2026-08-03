@@ -9,7 +9,16 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
 
   const uploaded = [];
   for (const track of pending) {
-    const path = await services.downloadTrack(track);
+    let path;
+    try {
+      path = await services.downloadTrack(track);
+    } catch (error) {
+      if (!(error instanceof Error) || !/video is not available|private video|members-only/i.test(error.message)) throw error;
+      console.warn(`Skipping unavailable video: ${track.title}`);
+      knownIds.add(track.id);
+      await options.onUploaded?.(knownIds);
+      continue;
+    }
     try {
       const mediaUrl = await services.uploadTrack(path);
       await services.addTrackToCard(profile.cardId, track, mediaUrl);

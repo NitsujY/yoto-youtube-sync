@@ -24,3 +24,18 @@ test("sync uploads only tracks not already in state", async () => {
   assert.deepEqual(calls, [{ cardId: "card-1", track: { id: "new", title: "New" }, mediaUrl: "yoto:#new.mp3" }]);
   assert.deepEqual([...knownIds], ["old", "new"]);
 });
+
+test("sync skips unavailable videos", async () => {
+  const knownIds = new Set();
+  const result = await syncProfile(
+    { cardId: "card-1", sources: ["https://youtube.com/playlist"] },
+    knownIds,
+    {
+      listTracks: async () => [{ id: "gone", title: "Gone" }],
+      downloadTrack: async () => { throw new Error("yt-dlp failed: This video is not available"); },
+    },
+  );
+
+  assert.deepEqual(result.uploaded, []);
+  assert.deepEqual([...knownIds], ["gone"]);
+});
