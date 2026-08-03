@@ -17,7 +17,8 @@ export async function uploadTrack(yoto, path) {
   const audio = await readFile(path);
   const sha256 = createHash("sha256").update(audio).digest("hex");
   const upload = await yoto.media.getUploadUrlForTranscode(sha256, "track.mp3");
-  await yoto.media.uploadFile(upload.uploadUrl, audio);
+  if (!upload.uploadId) throw new Error("Yoto did not return an upload ID.");
+  if (upload.uploadUrl) await yoto.media.uploadFile(upload.uploadUrl, audio);
 
   for (let attempt = 0; attempt < 400; attempt += 1) {
     const transcode = await yoto.media.getTranscodedUpload(upload.uploadId, true);
