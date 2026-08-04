@@ -26,3 +26,5 @@ yoto-sync sync --profile bedtime --limit 10
 ```
 
 Run `yoto-sync --help` for all commands. Schedule `yoto-sync sync --all` with cron or launchd.
+
+For a remote scheduler, register an HTTPS callback in Yoto and run `YOTO_REDIRECT_URI=https://... yoto-sync login start`. Have the callback run `yoto-sync login complete --code CODE --state STATE` using the same persistent configuration directory.

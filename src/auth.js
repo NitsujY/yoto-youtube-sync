@@ -25,7 +25,7 @@ function base64Url(value) {
   return value.toString("base64url");
 }
 
-export function startAuthorization(clientId) {
+export function startAuthorization(clientId, redirect = redirectUri, state) {
   const verifier = base64Url(randomBytes(32));
   const challenge = base64Url(createHash("sha256").update(verifier).digest());
   const url = new URL(`${authDomain}/authorize`);
@@ -36,7 +36,8 @@ export function startAuthorization(clientId) {
     client_id: clientId,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    redirect_uri: redirectUri,
+    redirect_uri: redirect,
+    ...(state && { state }),
   }).toString();
   return { verifier, url: url.toString() };
 }
@@ -63,13 +64,13 @@ export function waitForAuthorizationCode() {
   });
 }
 
-export function exchangeAuthorizationCode(clientId, code, verifier, request = fetch) {
+export function exchangeAuthorizationCode(clientId, code, verifier, redirect = redirectUri, request = fetch) {
   return requestToken({
     grant_type: "authorization_code",
     client_id: clientId,
     code_verifier: verifier,
     code,
-    redirect_uri: redirectUri,
+    redirect_uri: redirect,
   }, request);
 }
 

@@ -20,7 +20,7 @@ test("PKCE authorization requests an offline token for the Yoto API", () => {
 
 test("authorization code exchange sends the PKCE verifier", async () => {
   let request;
-  const result = await exchangeAuthorizationCode("client-id", "code", "verifier", async (url, options) => {
+  const result = await exchangeAuthorizationCode("client-id", "code", "verifier", redirectUri, async (url, options) => {
     request = { url, options };
     return new Response(JSON.stringify({ access_token: "access", refresh_token: "refresh", expires_in: 3600 }), { status: 200 });
   });
@@ -29,4 +29,12 @@ test("authorization code exchange sends the PKCE verifier", async () => {
   assert.equal(request.options.method, "POST");
   assert.equal(request.options.body.toString(), "grant_type=authorization_code&client_id=client-id&code_verifier=verifier&code=code&redirect_uri=http%3A%2F%2F127.0.0.1%3A8787%2Fcallback");
   assert.equal(result.access_token, "access");
+});
+
+test("HTTPS authorization includes state and uses the registered callback", () => {
+  const authorization = startAuthorization("client-id", "https://windmill.example/callback", "state");
+  const url = new URL(authorization.url);
+
+  assert.equal(url.searchParams.get("redirect_uri"), "https://windmill.example/callback");
+  assert.equal(url.searchParams.get("state"), "state");
 });

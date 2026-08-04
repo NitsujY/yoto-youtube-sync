@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
+import { randomBytes } from "node:crypto";
 import { loadEnvFile } from "node:process";
 import { configPath, loadConfig, loadState, saveConfig, saveState, statePath } from "./storage.js";
 import { createYoto, listCards, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
@@ -17,6 +18,8 @@ const help = `Usage: yoto-sync <command> [options]
 
 Commands:
   init | login                      Authenticate using YOTO_CLIENT_ID from .env
+  login start                       Begin HTTPS callback login using YOTO_REDIRECT_URI
+  login complete --code CODE --state STATE
   cards                             List available Yoto cards
   profile add <name> --card <id>    Add a card profile
   profile list | remove <name>      List or remove profiles
@@ -52,6 +55,8 @@ function optionsFor(args) {
       force: { type: "boolean" },
       limit: { type: "string" },
       "max-stories": { type: "string" },
+      code: { type: "string" },
+      state: { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "V" },
     },
@@ -67,8 +72,27 @@ export async function main(args = process.argv.slice(2), environment = process.e
 
   const config = await loadConfig();
   if (command === "init" || command === "login") {
-    const clientId = environment.YOTO_CLIENT_ID || config.auth?.clientId;
+    const clientId = environment.YOTO_CLIENT_ID || config.auth?.clientId || config.pendingAuthorization?.clientId;
     if (!clientId) fail("Set YOTO_CLIENT_ID in .env before logging in.");
+    if (action === "start") {
+      const redirect = environment.YOTO_REDIRECT_URI;
+      if (!redirect?.startsWith("https://")) fail("Set YOTO_REDIRECT_URI to your registered HTTPS callback.");
+      const state = randomBytes(32).toString("base64url");
+      const authorization = startAuthorization(clientId, redirect, state);
+      config.pendingAuthorization = { clientId, verifier: authorization.verifier, state, redirect };
+      await saveConfig(config);
+      return console.log(`Open this URL in a browser:\n${authorization.url}`);
+    }
+    if (action === "complete") {
+      const pending = config.pendingAuthorization;
+      if (!values.code || !values.state || !pending || values.state !== pending.state) fail("Yoto callback state is invalid or expired; run `yoto-sync login start` again.");
+      const tokens = await exchangeAuthorizationCode(pending.clientId, values.code, pending.verifier, pending.redirect);
+      config.auth = savedTokens(pending.clientId, tokens);
+      delete config.pendingAuthorization;
+      await saveConfig(config);
+      return console.log(`Authenticated. Tokens are saved in ${configPath}`);
+    }
+    if (action) fail("Use `login`, `login start`, or `login complete --code CODE --state STATE`.");
     const authorization = startAuthorization(clientId);
     const codePromise = waitForAuthorizationCode();
     console.log(`Open this URL in a browser on this computer:\n${authorization.url}`);
