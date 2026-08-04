@@ -26,8 +26,13 @@ export async function uploadTrack(yoto, path) {
   if (!upload.uploadId) throw new Error("Yoto did not return an upload ID.");
   if (upload.uploadUrl) await yoto.media.uploadFile(upload.uploadUrl, audio);
 
+  let status;
   for (let attempt = 0; attempt < 400; attempt += 1) {
     const transcode = await yoto.media.getTranscodedUpload(upload.uploadId, true);
+    if (transcode.status !== status) {
+      status = transcode.status;
+      console.log(`Yoto transcode: ${status || "pending"}`);
+    }
     if (transcode.status === "complete" && transcode.url) return transcode.url;
     if (transcode.status === "failed") throw new Error("Yoto could not transcode the uploaded audio.");
     await sleep(1500);
