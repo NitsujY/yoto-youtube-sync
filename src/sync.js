@@ -18,8 +18,6 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
     } catch (error) {
       if (!(error instanceof Error) || !/video is not available|private video|members-only/i.test(error.message)) throw error;
       console.warn(`Skipping unavailable video: ${track.title}`);
-      knownIds.add(track.id);
-      await options.onUploaded?.(knownIds);
       continue;
     }
     try {

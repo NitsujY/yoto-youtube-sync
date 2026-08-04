@@ -25,7 +25,7 @@ test("sync uploads only tracks not already in state", async () => {
   assert.deepEqual([...knownIds], ["old", "new"]);
 });
 
-test("sync skips unavailable videos", async () => {
+test("sync retries unavailable videos on later runs", async () => {
   const knownIds = new Set();
   const result = await syncProfile(
     { cardId: "card-1", sources: ["https://youtube.com/playlist"] },
@@ -37,7 +37,7 @@ test("sync skips unavailable videos", async () => {
   );
 
   assert.deepEqual(result.uploaded, []);
-  assert.deepEqual([...knownIds], ["gone"]);
+  assert.deepEqual([...knownIds], []);
 });
 
 test("sync removes evicted stories from state", async () => {

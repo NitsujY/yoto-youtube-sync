@@ -177,8 +177,13 @@ export async function main(args = process.argv.slice(2), environment = process.e
       limit,
       maxStories,
       onDetected: (tracks, pending) => {
-        console.log(`${name}: ${tracks.length} detected, ${pending.length} new; keeping ${maxStories} stories.`);
-        if (pending.length) console.table(pending.map((track) => ({ id: track.id, title: track.title })));
+        const pendingIds = new Set(pending.map((track) => track.id));
+        console.log(`${name}: ${tracks.length} detected; ${tracks.length - pending.length} previously synced, ${pending.length} new; keeping ${maxStories} stories.`);
+        console.table(tracks.map((track) => ({
+          status: pendingIds.has(track.id) ? "new" : "previously synced",
+          id: track.id,
+          title: track.title,
+        })));
       },
       onUpdating: (track) => console.log(`Adding: ${track.title}`),
       onRemoved: (tracks) => console.log(`Removed oldest: ${tracks.map((track) => track.title).join(", ")}`),
