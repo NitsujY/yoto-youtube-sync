@@ -2,7 +2,7 @@
 import { parseArgs } from "node:util";
 import { loadEnvFile } from "node:process";
 import { configPath, loadConfig, loadState, saveConfig, saveState, statePath } from "./storage.js";
-import { createYoto, listCards, addTrackToCard, uploadTrack } from "./yoto.js";
+import { createYoto, listCards, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
 import { downloadTrack, listTracks, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
 import { exchangeAuthorizationCode, savedTokens, startAuthorization, validTokens, waitForAuthorizationCode } from "./auth.js";
@@ -139,7 +139,10 @@ export async function main(args = process.argv.slice(2), environment = process.e
   };
   for (const name of names) {
     const profile = profileFor(config, name);
-    const knownIds = new Set(state.profiles[name]?.ids || []);
+    const knownIds = new Set([
+      ...(state.profiles[name]?.ids || []),
+      ...await listCardTrackIds(yoto, profile.cardId),
+    ]);
     const saveProgress = async (ids) => {
       state.profiles[name] = { ids: [...ids] };
       await saveState(state);

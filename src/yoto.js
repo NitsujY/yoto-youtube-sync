@@ -13,6 +13,12 @@ export async function listCards(yoto) {
   return yoto.content.getMyCards();
 }
 
+export async function listCardTrackIds(yoto, cardId) {
+  const card = await yoto.content.getCard(cardId);
+  const chapters = Array.isArray(card.content?.chapters) ? card.content.chapters : [];
+  return chapters.map((chapter) => chapter.key).filter(Boolean);
+}
+
 export async function uploadTrack(yoto, path) {
   const audio = await readFile(path);
   const sha256 = createHash("sha256").update(audio).digest("hex");
