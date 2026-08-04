@@ -28,7 +28,7 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
   const chapters = Array.from({ length: 20 }, (_, index) => ({ key: `old-${index + 1}`, title: `Old ${index + 1}` }));
   const yoto = {
     content: {
-      getCard: async () => ({ cardId: "card-1", content: { chapters } }),
+      getMyCards: async () => [{ cardId: "card-1", content: { chapters } }],
       updateCard: async (card) => { updated = card; },
     },
   };
@@ -44,7 +44,7 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
 test("listCardTrackIds reads existing chapter keys", async () => {
   const ids = await listCardTrackIds({
     content: {
-      getCard: async () => ({ content: { chapters: [{ key: "old" }, { title: "Untitled" }, { key: "new" }] } }),
+      getMyCards: async () => [{ cardId: "card-1", content: { chapters: [{ key: "old" }, { title: "Untitled" }, { key: "new" }] } }],
     },
   }, "card-1");
 
