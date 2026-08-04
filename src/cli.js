@@ -28,7 +28,8 @@ Commands:
   status [--profile <name>]         Show configured profiles
   config path | show                Show local configuration
 
-Options: --dry-run, --force, --help, --version`;
+Options: --dry-run, --force, --limit <count>, --max-stories <count> (default: 20),
+         --help, --version`;
 
 function fail(message) {
   throw new Error(message);
@@ -50,6 +51,7 @@ function optionsFor(args) {
       "dry-run": { type: "boolean" },
       force: { type: "boolean" },
       limit: { type: "string" },
+      "max-stories": { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "V" },
     },
@@ -121,7 +123,9 @@ export async function main(args = process.argv.slice(2), environment = process.e
   if (command !== "sync") fail(`Unknown command: ${command}`);
   if (values.all && values.profile) fail("Use either --all or --profile, not both.");
   if (values.limit && !/^[1-9]\d*$/.test(values.limit)) fail("Use a positive integer for --limit.");
+  if (values["max-stories"] && !/^[1-9]\d*$/.test(values["max-stories"])) fail("Use a positive integer for --max-stories.");
   const limit = values.limit && Number(values.limit);
+  const maxStories = Number(values["max-stories"] || 20);
 
   const names = values.profile ? [values.profile] : Object.keys(config.profiles);
   if (!names.length) fail("Add a profile before syncing.");
@@ -130,7 +134,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
     listTracks,
     downloadTrack,
     uploadTrack: (path) => uploadTrack(yoto, path),
-    addTrackToCard: (cardId, track, mediaUrl) => addTrackToCard(yoto, cardId, track, mediaUrl),
+    addTrackToCard: (cardId, track, mediaUrl, maximum) => addTrackToCard(yoto, cardId, track, mediaUrl, maximum),
     removeDownload,
   };
   for (const name of names) {
@@ -144,10 +148,17 @@ export async function main(args = process.argv.slice(2), environment = process.e
       dryRun: values["dry-run"],
       force: values.force,
       limit,
+      maxStories,
+      onDetected: (tracks, pending) => {
+        console.log(`${name}: ${tracks.length} detected, ${pending.length} new; keeping ${maxStories} stories.`);
+        if (pending.length) console.table(pending.map((track) => ({ id: track.id, title: track.title })));
+      },
+      onUpdating: (track) => console.log(`Adding: ${track.title}`),
+      onRemoved: (tracks) => console.log(`Removed oldest: ${tracks.map((track) => track.title).join(", ")}`),
       onUploaded: saveProgress,
     });
     if (!values["dry-run"]) state.profiles[name] = { ids: [...knownIds] };
-    console.log(`${name}: ${result.uploaded.length} uploaded (${result.found} found)`);
+    console.log(`${name}: ${result.uploaded.length} uploaded, ${result.removed.length} removed.`);
   }
   if (!values["dry-run"]) await saveState(state);
 }

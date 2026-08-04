@@ -5,10 +5,13 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
   }
 
   const pending = tracks.filter((track) => options.force || !knownIds.has(track.id));
-  if (options.dryRun) return { found: tracks.length, uploaded: [] };
+  await options.onDetected?.(tracks, pending);
+  if (options.dryRun) return { found: tracks.length, pending, uploaded: [], removed: [] };
 
   const uploaded = [];
+  const removed = [];
   for (const track of pending) {
+    await options.onUpdating?.(track);
     let path;
     try {
       path = await services.downloadTrack(track);
@@ -21,13 +24,17 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
     }
     try {
       const mediaUrl = await services.uploadTrack(path);
-      await services.addTrackToCard(profile.cardId, track, mediaUrl);
+      const evicted = await services.addTrackToCard(profile.cardId, track, mediaUrl, options.maxStories);
+      const removedTracks = Array.isArray(evicted) ? evicted : [];
+      for (const oldTrack of removedTracks) knownIds.delete(oldTrack.id);
+      removed.push(...removedTracks);
       knownIds.add(track.id);
       uploaded.push(track);
-      await options.onUploaded?.(knownIds);
+      await options.onUploaded?.(knownIds, track);
+      if (removedTracks.length) await options.onRemoved?.(removedTracks);
     } finally {
       await services.removeDownload(path);
     }
   }
-  return { found: tracks.length, uploaded };
+  return { found: tracks.length, pending, uploaded, removed };
 }

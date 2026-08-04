@@ -29,7 +29,7 @@ export async function uploadTrack(yoto, path) {
   throw new Error("Timed out waiting for Yoto to transcode the uploaded audio.");
 }
 
-export async function addTrackToCard(yoto, cardId, track, mediaUrl) {
+export async function addTrackToCard(yoto, cardId, track, mediaUrl, maxStories = 20) {
   const card = await yoto.content.getCard(cardId);
   const chapters = Array.isArray(card.content?.chapters) ? card.content.chapters : [];
   const chapter = {
@@ -44,10 +44,15 @@ export async function addTrackToCard(yoto, cardId, track, mediaUrl) {
       type: "audio",
     }],
   };
+  const updatedChapters = [...chapters, chapter];
+  const removedChapters = updatedChapters.slice(0, -maxStories);
 
   await yoto.content.updateCard({
     ...card,
     cardId,
-    content: { ...card.content, chapters: [...chapters, chapter] },
+    content: { ...card.content, chapters: updatedChapters.slice(-maxStories) },
   });
+  return removedChapters
+    .filter((chapter) => chapter.key)
+    .map((chapter) => ({ id: chapter.key, title: chapter.title || chapter.key }));
 }

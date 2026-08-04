@@ -3,7 +3,7 @@ import { rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { uploadTrack } from "../src/yoto.js";
+import { addTrackToCard, uploadTrack } from "../src/yoto.js";
 
 test("uploadTrack resumes an existing Yoto transcode", async () => {
   const path = join(tmpdir(), `yoto-${Date.now()}.mp3`);
@@ -21,4 +21,22 @@ test("uploadTrack resumes an existing Yoto transcode", async () => {
   } finally {
     await rm(path);
   }
+});
+
+test("addTrackToCard keeps the newest 20 stories", async () => {
+  let updated;
+  const chapters = Array.from({ length: 20 }, (_, index) => ({ key: `old-${index + 1}`, title: `Old ${index + 1}` }));
+  const yoto = {
+    content: {
+      getCard: async () => ({ cardId: "card-1", content: { chapters } }),
+      updateCard: async (card) => { updated = card; },
+    },
+  };
+
+  const removed = await addTrackToCard(yoto, "card-1", { id: "new", title: "New", duration: 10 }, "https://media.example/new");
+
+  assert.deepEqual(removed, [{ id: "old-1", title: "Old 1" }]);
+  assert.equal(updated.content.chapters.length, 20);
+  assert.equal(updated.content.chapters[0].key, "old-2");
+  assert.equal(updated.content.chapters.at(-1).key, "new");
 });

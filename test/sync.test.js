@@ -39,3 +39,21 @@ test("sync skips unavailable videos", async () => {
   assert.deepEqual(result.uploaded, []);
   assert.deepEqual([...knownIds], ["gone"]);
 });
+
+test("sync removes evicted stories from state", async () => {
+  const knownIds = new Set(["old"]);
+  const result = await syncProfile(
+    { cardId: "card-1", sources: ["https://youtube.com/playlist"] },
+    knownIds,
+    {
+      listTracks: async () => [{ id: "new", title: "New" }],
+      downloadTrack: async () => "new.mp3",
+      uploadTrack: async () => "yoto:#new.mp3",
+      addTrackToCard: async () => [{ id: "old", title: "Old" }],
+      removeDownload: async () => {},
+    },
+  );
+
+  assert.deepEqual(result.removed, [{ id: "old", title: "Old" }]);
+  assert.deepEqual([...knownIds], ["new"]);
+});
