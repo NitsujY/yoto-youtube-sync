@@ -1,7 +1,10 @@
+import { createHash, randomBytes } from "node:crypto";
+import { createServer } from "node:http";
+
 const authDomain = "https://login.yotoplay.com";
 const audience = "https://api.yotoplay.com";
-const scope = "openid profile email family:library:manage user:content:manage offline_access";
-const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+const scope = "family:library:manage user:content:manage offline_access";
+export const redirectUri = "http://127.0.0.1:8787/callback";
 
 async function requestToken(values, request = fetch) {
   const response = await request(`${authDomain}/oauth/token`, {
@@ -18,45 +21,56 @@ async function requestToken(values, request = fetch) {
   return body;
 }
 
-export async function startDeviceAuthorization(clientId, request = fetch) {
-  const response = await request(`${authDomain}/oauth/device/code`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-    audience,
-    scope,
-    client_id: clientId,
-    }),
-  });
-  const device = await response.json();
-  if (!response.ok) throw new Error(device.error_description || device.error || "Yoto device authorization failed.");
-  if (!device.device_code || !device.user_code || !(device.verification_uri_complete || device.verification_uri)) {
-    throw new Error("Yoto returned an invalid device authorization.");
-  }
-  return device;
+function base64Url(value) {
+  return value.toString("base64url");
 }
 
-export async function waitForDeviceAuthorization(clientId, device, request = fetch, pause = sleep) {
-  const deadline = Date.now() + (Number(device.expires_in) * 1000);
-  let interval = Number(device.interval || 5) * 1000;
-  while (Date.now() < deadline) {
-    await pause(interval);
-    const response = await requestToken({
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-      client_id: clientId,
-      device_code: device.device_code,
-    }, request).catch((error) => error);
-    if (!(response instanceof Error)) return response;
-    if (response.code === "authorization_pending") continue;
-    if (response.code === "slow_down") {
-      interval += 5000;
-      continue;
-    }
-    if (response.code === "access_denied") throw new Error("Yoto authorization was denied.");
-    if (response.code === "expired_token") throw new Error("Yoto device code expired; run `yoto-sync login` again.");
-    throw response;
-  }
-  throw new Error("Yoto device code expired; run `yoto-sync login` again.");
+export function startAuthorization(clientId) {
+  const verifier = base64Url(randomBytes(32));
+  const challenge = base64Url(createHash("sha256").update(verifier).digest());
+  const url = new URL(`${authDomain}/authorize`);
+  url.search = new URLSearchParams({
+    audience,
+    scope,
+    response_type: "code",
+    client_id: clientId,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    redirect_uri: redirectUri,
+  }).toString();
+  return { verifier, url: url.toString() };
+}
+
+export function waitForAuthorizationCode() {
+  return new Promise((resolve, reject) => {
+    const server = createServer((request, response) => {
+      const url = new URL(request.url, redirectUri);
+      if (url.pathname !== "/callback") {
+        response.writeHead(404).end();
+        return;
+      }
+      const code = url.searchParams.get("code");
+      const error = url.searchParams.get("error");
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end("<p>Yoto login complete. You can close this tab.</p>");
+      server.close();
+      if (error) reject(new Error(`Yoto login failed: ${error}`));
+      else if (code) resolve(code);
+      else reject(new Error("Yoto login returned no authorization code."));
+    });
+    server.once("error", reject);
+    server.listen(8787, "127.0.0.1");
+  });
+}
+
+export function exchangeAuthorizationCode(clientId, code, verifier, request = fetch) {
+  return requestToken({
+    grant_type: "authorization_code",
+    client_id: clientId,
+    code_verifier: verifier,
+    code,
+    redirect_uri: redirectUri,
+  }, request);
 }
 
 export async function validTokens(auth, request = fetch) {
