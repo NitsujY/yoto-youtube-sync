@@ -5,7 +5,7 @@ import { configPath, loadConfig, loadState, saveConfig, saveState, statePath } f
 import { createYoto, listCards, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
 import { downloadTrack, listTracks, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
-import { exchangeAuthorizationCode, savedTokens, startAuthorization, validTokens, waitForAuthorizationCode } from "./auth.js";
+import { savedTokens, startDeviceAuthorization, validTokens, waitForDeviceAuthorization } from "./auth.js";
 
 try {
   loadEnvFile(".env");
@@ -69,10 +69,9 @@ export async function main(args = process.argv.slice(2), environment = process.e
   if (command === "init" || command === "login") {
     const clientId = environment.YOTO_CLIENT_ID || config.auth?.clientId;
     if (!clientId) fail("Set YOTO_CLIENT_ID in .env before logging in.");
-    const authorization = startAuthorization(clientId);
-    const codePromise = waitForAuthorizationCode();
-    console.log(`Open this URL in a browser on this computer:\n${authorization.url}`);
-    const tokens = await exchangeAuthorizationCode(clientId, await codePromise, authorization.verifier);
+    const device = await startDeviceAuthorization(clientId);
+    console.log(`Open this URL and enter code ${device.user_code}:\n${device.verification_uri_complete || device.verification_uri}`);
+    const tokens = await waitForDeviceAuthorization(clientId, device);
     config.auth = savedTokens(clientId, tokens);
     await saveConfig(config);
     return console.log(`Authenticated. Tokens are saved in ${configPath}`);
