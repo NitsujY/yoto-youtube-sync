@@ -22,9 +22,16 @@ export async function listCardTrackIds(yoto, cardId) {
 export async function uploadTrack(yoto, path) {
   const audio = await readFile(path);
   const sha256 = createHash("sha256").update(audio).digest("hex");
+  console.log(`Yoto upload: requesting URL (${audio.length} bytes)`);
   const upload = await yoto.media.getUploadUrlForTranscode(sha256, "track.mp3");
   if (!upload.uploadId) throw new Error("Yoto did not return an upload ID.");
-  if (upload.uploadUrl) await yoto.media.uploadFile(upload.uploadUrl, audio);
+  if (upload.uploadUrl) {
+    console.log("Yoto upload: uploading audio");
+    await yoto.media.uploadFile(upload.uploadUrl, audio);
+    console.log("Yoto upload: upload complete");
+  } else {
+    console.log("Yoto upload: existing upload found");
+  }
 
   let status;
   for (let attempt = 0; attempt < 400; attempt += 1) {

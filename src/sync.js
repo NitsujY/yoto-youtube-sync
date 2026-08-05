@@ -14,7 +14,9 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
     await options.onUpdating?.(track);
     let path;
     try {
+      console.log(`Downloading: ${track.title}`);
       path = await services.downloadTrack(track);
+      console.log(`Downloaded: ${track.title}`);
     } catch (error) {
       if (!(error instanceof Error) || !/video is not available|private video|members-only/i.test(error.message)) throw error;
       console.warn(`Skipping unavailable video: ${track.title}`);
