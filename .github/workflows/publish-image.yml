@@ -32,13 +32,13 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/nitsujy/yoto-sync:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=yoto-sync
+          cache-to: type=gha,mode=max,scope=yoto-sync
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.worker
           push: true
           tags: ghcr.io/nitsujy/yoto-sync-worker:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=yoto-sync-worker
+          cache-to: type=gha,mode=max,scope=yoto-sync-worker
