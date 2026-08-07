@@ -2,7 +2,7 @@
 import { parseArgs } from "node:util";
 import { randomBytes } from "node:crypto";
 import { loadEnvFile } from "node:process";
-import { configPath, loadConfig, loadState, saveConfig, saveState, statePath } from "./storage.js";
+import { configPath, loadConfig, saveConfig } from "./storage.js";
 import { createYoto, listCards, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
 import { downloadTrack, listTracks, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
@@ -153,7 +153,6 @@ export async function main(args = process.argv.slice(2), environment = process.e
 
   const names = values.profile ? [values.profile] : Object.keys(config.profiles);
   if (!names.length) fail("Add a profile before syncing.");
-  const state = await loadState();
   const services = {
     listTracks,
     downloadTrack,
@@ -163,14 +162,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
   };
   for (const name of names) {
     const profile = profileFor(config, name);
-    const knownIds = new Set([
-      ...(state.profiles[name]?.ids || []),
-      ...await listCardTrackIds(yoto, profile.cardId),
-    ]);
-    const saveProgress = async (ids) => {
-      state.profiles[name] = { ids: [...ids] };
-      await saveState(state);
-    };
+    const knownIds = new Set(await listCardTrackIds(yoto, profile.cardId));
     const result = await syncProfile(profile, knownIds, services, {
       dryRun: values["dry-run"],
       force: values.force,
@@ -187,12 +179,9 @@ export async function main(args = process.argv.slice(2), environment = process.e
       },
       onUpdating: (track) => console.log(`Adding: ${track.title}`),
       onRemoved: (tracks) => console.log(`Removed oldest: ${tracks.map((track) => track.title).join(", ")}`),
-      onUploaded: saveProgress,
     });
-    if (!values["dry-run"]) state.profiles[name] = { ids: [...knownIds] };
     console.log(`${name}: ${result.uploaded.length} uploaded, ${result.removed.length} removed.`);
   }
-  if (!values["dry-run"]) await saveState(state);
 }
 
 main().catch((error) => {
