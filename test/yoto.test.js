@@ -12,7 +12,10 @@ test("uploadTrack resumes an existing Yoto transcode", async () => {
     media: {
       getUploadUrlForTranscode: async () => ({ uploadId: "upload-1" }),
       uploadFile: async () => assert.fail("existing upload must not be uploaded again"),
-      getTranscodedUpload: async () => ({ status: "complete", url: "https://media.example/track" }),
+      getTranscodedUpload: async (...args) => {
+        assert.deepEqual(args, ["upload-1"]);
+        return { status: "complete", url: "https://media.example/track" };
+      },
     },
   };
 

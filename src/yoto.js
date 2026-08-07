@@ -37,7 +37,7 @@ export async function uploadTrack(yoto, path) {
 
   let status;
   for (let attempt = 0; attempt < 80; attempt += 1) {
-    const transcode = await yoto.media.getTranscodedUpload(upload.uploadId, true);
+    const transcode = await yoto.media.getTranscodedUpload(upload.uploadId);
     if (attempt === 0 || transcode.status !== status || attempt % 20 === 0) {
       status = transcode.status;
       const progress = transcode.progress;
