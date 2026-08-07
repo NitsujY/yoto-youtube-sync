@@ -57,7 +57,7 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
   const chapters = Array.from({ length: 20 }, (_, index) => ({ key: `old-${index + 1}`, title: `Old ${index + 1}` }));
   const yoto = {
     content: {
-      getMyCards: async () => [{ cardId: "card-1", content: { chapters } }],
+      getCard: async () => ({ cardId: "card-1", content: { chapters } }),
       updateCard: async (card) => { updated = card; },
     },
   };
@@ -73,7 +73,7 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
 test("listCardTrackIds reads existing chapter keys", async () => {
   const ids = await listCardTrackIds({
     content: {
-      getMyCards: async () => [{ cardId: "card-1", content: { chapters: [{ key: "old" }, { title: "Untitled" }, { key: "new" }] } }],
+      getCard: async () => ({ cardId: "card-1", content: { chapters: [{ key: "old" }, { title: "Untitled" }, { key: "new" }] } }),
     },
   }, "card-1");
 
@@ -84,7 +84,7 @@ test("addTrackToCard refuses a card summary without chapters", async () => {
   await assert.rejects(
     addTrackToCard({
       content: {
-        getMyCards: async () => [{ cardId: "card-1", content: {} }],
+        getCard: async () => ({ cardId: "card-1", content: {} }),
         updateCard: async () => assert.fail("must not overwrite a card without chapters"),
       },
     }, "card-1", { id: "new", title: "New", duration: 10 }, "yoto:#media-id"),

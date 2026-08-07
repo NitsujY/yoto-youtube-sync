@@ -81,7 +81,7 @@ export async function addTrackToCard(yoto, cardId, track, mediaUrl, maxStories =
 }
 
 async function findCard(yoto, cardId) {
-  const card = (await yoto.content.getMyCards()).find((candidate) => candidate.cardId === cardId);
+  const card = await yoto.content.getCard(cardId);
   if (!card) throw new Error(`Yoto card ${cardId} was not found.`);
   return card;
 }

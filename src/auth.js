@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 
 const authDomain = "https://login.yotoplay.com";
 const audience = "https://api.yotoplay.com";
-const scope = "family:library:manage user:content:manage offline_access";
+const scope = "family:library:manage family:library:view user:content:manage user:content:view offline_access";
 export const redirectUri = "http://127.0.0.1:8787/callback";
 
 async function requestToken(values, request = fetch) {
