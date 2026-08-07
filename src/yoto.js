@@ -40,7 +40,10 @@ export async function uploadTrack(yoto, path) {
     const transcode = await yoto.media.getTranscodedUpload(upload.uploadId, true);
     if (attempt === 0 || transcode.status !== status || attempt % 20 === 0) {
       status = transcode.status;
-      console.log(`Yoto transcode: ${status || "pending"} (${attempt * 1.5}s elapsed)`);
+      const progress = transcode.progress;
+      const state = status || progress?.phase || "pending";
+      const percent = progress?.percent === undefined ? "" : ` ${progress.percent}%`;
+      console.log(`Yoto transcode: ${state}${percent} (${attempt * 1.5}s elapsed)`);
     }
     if (transcode.status === "complete" && transcode.url) return transcode.url;
     if (transcode.status === "failed") throw new Error("Yoto could not transcode the uploaded audio.");
