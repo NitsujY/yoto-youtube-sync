@@ -25,9 +25,10 @@ export async function uploadTrack(yoto, path) {
   console.log(`Yoto upload: requesting URL (${audio.length} bytes)`);
   const upload = await yoto.media.getUploadUrlForTranscode(sha256, "track.mp3");
   if (!upload.uploadId) throw new Error("Yoto did not return an upload ID.");
-  if (upload.uploadUrl) {
+  const uploadUrl = upload.uploadUrl || upload.url;
+  if (uploadUrl) {
     console.log("Yoto upload: uploading audio");
-    await yoto.media.uploadFile(upload.uploadUrl, audio);
+    await yoto.media.uploadFile(uploadUrl, audio);
     console.log("Yoto upload: upload complete");
   } else {
     console.log("Yoto upload: existing upload found");

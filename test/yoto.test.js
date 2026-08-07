@@ -23,6 +23,29 @@ test("uploadTrack resumes an existing Yoto transcode", async () => {
   }
 });
 
+test("uploadTrack uploads to the SDK's URL field", async () => {
+  const path = join(tmpdir(), `yoto-${Date.now()}.mp3`);
+  await writeFile(path, "audio");
+  let uploaded = false;
+  const yoto = {
+    media: {
+      getUploadUrlForTranscode: async () => ({ uploadId: "upload-1", url: "https://upload.example/track" }),
+      uploadFile: async (url) => {
+        assert.equal(url, "https://upload.example/track");
+        uploaded = true;
+      },
+      getTranscodedUpload: async () => ({ status: "complete", url: "https://media.example/track" }),
+    },
+  };
+
+  try {
+    await uploadTrack(yoto, path);
+    assert.equal(uploaded, true);
+  } finally {
+    await rm(path);
+  }
+});
+
 test("addTrackToCard keeps the newest 20 stories", async () => {
   let updated;
   const chapters = Array.from({ length: 20 }, (_, index) => ({ key: `old-${index + 1}`, title: `Old ${index + 1}` }));
