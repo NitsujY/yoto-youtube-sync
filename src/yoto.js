@@ -45,7 +45,8 @@ export async function uploadTrack(yoto, path) {
       const percent = progress?.percent === undefined ? "" : ` ${progress.percent}%`;
       console.log(`Yoto transcode: ${state}${percent} (${attempt * 1.5}s elapsed)`);
     }
-    if (transcode.status === "complete" && transcode.url) return transcode.url;
+    if (transcode.url) return transcode.url;
+    if (transcode.transcodedSha256) return `yoto:#${transcode.transcodedSha256}`;
     if (transcode.status === "failed") throw new Error("Yoto could not transcode the uploaded audio.");
     await sleep(1500);
   }

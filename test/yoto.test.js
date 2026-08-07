@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 import test from "node:test";
 import { addTrackToCard, listCardTrackIds, uploadTrack } from "../src/yoto.js";
 
-test("uploadTrack resumes an existing Yoto transcode", async () => {
+test("uploadTrack uses the documented Yoto media reference", async () => {
   const path = join(tmpdir(), `yoto-${Date.now()}.mp3`);
   await writeFile(path, "audio");
   const yoto = {
@@ -14,13 +14,13 @@ test("uploadTrack resumes an existing Yoto transcode", async () => {
       uploadFile: async () => assert.fail("existing upload must not be uploaded again"),
       getTranscodedUpload: async (...args) => {
         assert.deepEqual(args, ["upload-1"]);
-        return { status: "complete", url: "https://media.example/track" };
+        return { transcodedSha256: "media-id" };
       },
     },
   };
 
   try {
-    assert.equal(await uploadTrack(yoto, path), "https://media.example/track");
+    assert.equal(await uploadTrack(yoto, path), "yoto:#media-id");
   } finally {
     await rm(path);
   }
