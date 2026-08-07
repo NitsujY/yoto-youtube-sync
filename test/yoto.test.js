@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import test from "node:test";
 import { addTrackToCard, listCardTrackIds, uploadTrack } from "../src/yoto.js";
 
@@ -29,7 +29,10 @@ test("uploadTrack uploads to the SDK's URL field", async () => {
   let uploaded = false;
   const yoto = {
     media: {
-      getUploadUrlForTranscode: async () => ({ uploadId: "upload-1", url: "https://upload.example/track" }),
+      getUploadUrlForTranscode: async (_, filename) => {
+        assert.equal(filename, basename(path));
+        return { uploadId: "upload-1", url: "https://upload.example/track" };
+      },
       uploadFile: async (url) => {
         assert.equal(url, "https://upload.example/track");
         uploaded = true;

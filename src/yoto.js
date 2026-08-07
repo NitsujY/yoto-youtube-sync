@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { createYotoSdk } from "@yotoplay/yoto-sdk";
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -23,7 +24,7 @@ export async function uploadTrack(yoto, path) {
   const audio = await readFile(path);
   const sha256 = createHash("sha256").update(audio).digest("hex");
   console.log(`Yoto upload: requesting URL (${audio.length} bytes)`);
-  const upload = await yoto.media.getUploadUrlForTranscode(sha256, "track.mp3");
+  const upload = await yoto.media.getUploadUrlForTranscode(sha256, basename(path));
   if (!upload.uploadId) throw new Error("Yoto did not return an upload ID.");
   const uploadUrl = upload.uploadUrl || upload.url;
   if (uploadUrl) {
