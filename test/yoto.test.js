@@ -79,3 +79,15 @@ test("listCardTrackIds reads existing chapter keys", async () => {
 
   assert.deepEqual(ids, ["old", "new"]);
 });
+
+test("addTrackToCard refuses a card summary without chapters", async () => {
+  await assert.rejects(
+    addTrackToCard({
+      content: {
+        getMyCards: async () => [{ cardId: "card-1", content: {} }],
+        updateCard: async () => assert.fail("must not overwrite a card without chapters"),
+      },
+    }, "card-1", { id: "new", title: "New", duration: 10 }, "yoto:#media-id"),
+    /did not include chapters/,
+  );
+});

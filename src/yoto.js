@@ -16,8 +16,7 @@ export async function listCards(yoto) {
 
 export async function listCardTrackIds(yoto, cardId) {
   const card = await findCard(yoto, cardId);
-  const chapters = Array.isArray(card.content?.chapters) ? card.content.chapters : [];
-  return chapters.map((chapter) => chapter.key).filter(Boolean);
+  return cardChapters(card).map((chapter) => chapter.key).filter(Boolean);
 }
 
 export async function uploadTrack(yoto, path) {
@@ -55,7 +54,7 @@ export async function uploadTrack(yoto, path) {
 
 export async function addTrackToCard(yoto, cardId, track, mediaUrl, maxStories = 20) {
   const card = await findCard(yoto, cardId);
-  const chapters = Array.isArray(card.content?.chapters) ? card.content.chapters : [];
+  const chapters = cardChapters(card);
   const chapter = {
     title: track.title,
     key: track.id,
@@ -85,4 +84,11 @@ async function findCard(yoto, cardId) {
   const card = (await yoto.content.getMyCards()).find((candidate) => candidate.cardId === cardId);
   if (!card) throw new Error(`Yoto card ${cardId} was not found.`);
   return card;
+}
+
+function cardChapters(card) {
+  if (!Array.isArray(card.content?.chapters)) {
+    throw new Error(`Yoto card ${card.cardId} did not include chapters; refusing to overwrite its content.`);
+  }
+  return card.content.chapters;
 }
