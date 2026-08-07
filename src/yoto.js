@@ -22,7 +22,8 @@ export async function listCardTrackIds(yoto, cardId) {
 
 export async function uploadTrack(yoto, path) {
   const audio = await readFile(path);
-  const sha256 = createHash("sha256").update(audio).digest("hex");
+  // ponytail: v2 avoids the empty upload record created before upload.url was handled.
+  const sha256 = createHash("sha256").update(audio).update("\0yoto-sync-v2").digest("hex");
   console.log(`Yoto upload: requesting URL (${audio.length} bytes)`);
   const upload = await yoto.media.getUploadUrlForTranscode(sha256, basename(path));
   if (!upload.uploadId) throw new Error("Yoto did not return an upload ID.");
