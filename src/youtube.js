@@ -27,7 +27,8 @@ export async function listTracks(url, limit, verbose = false) {
   let result;
   try {
     // ponytail: --flat-playlist is fast but omits upload_date/timestamp, so we can't sort by date.
-    const args = ["--js-runtimes", "node", "--dump-single-json", "--no-warnings", "--ignore-errors"];
+    // Remote EJS solver is required for YouTube's current JS challenges inside container/CI environments.
+    const args = ["--js-runtimes", "node", "--remote-components", "ejs:github", "--dump-single-json", "--no-warnings", "--ignore-errors"];
     if (limit) args.push("--playlist-end", String(limit));
     args.push(url);
     result = JSON.parse(await run("yt-dlp", args, true));
@@ -41,7 +42,7 @@ export async function listTracks(url, limit, verbose = false) {
     .map((entry) => ({
       id: entry.id,
       title: entry.title || entry.id,
-      url: entry.webpage_url || entry.url,
+      url: entry.webpage_url || entry.url || entry.original_url,
       duration: Number(entry.duration) || 0,
       timestamp: Number(entry.timestamp) || parseUploadDate(entry.upload_date) || 0,
     }));
@@ -54,7 +55,7 @@ export async function listTracks(url, limit, verbose = false) {
 export async function downloadTrack(track) {
   const directory = await mkdir(join(tmpdir(), "yoto-sync"), { recursive: true }).then(() => join(tmpdir(), "yoto-sync"));
   const path = join(directory, `${track.id}.mp3`);
-  await run("yt-dlp", ["--js-runtimes", "node", "--extractor-args", "youtube:player_client=android", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
+  await run("yt-dlp", ["--js-runtimes", "node", "--remote-components", "ejs:github", "--extractor-args", "youtube:player_client=android", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
   const taggedPath = `${path}.tagged.mp3`;
   await run("ffmpeg", ["-y", "-i", path, "-map", "0:a", "-c", "copy", "-metadata", "comment=yoto-sync-v2", taggedPath]);
   await rename(taggedPath, path);
