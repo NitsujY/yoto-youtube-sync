@@ -9,7 +9,7 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
 
   const pending = targetTracks.filter((track) => options.force || !knownIds.has(track.id));
   await options.onDetected?.(targetTracks, pending);
-  if (options.dryRun) return { found: targetTracks.length, pending, uploaded: [], removed: [] };
+  if (options.dryRun) return { found: targetTracks.length, target: targetTracks, pending, uploaded: [], removed: [] };
 
   const uploaded = [];
   const removed = [];
@@ -39,5 +39,5 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
       await services.removeDownload(path);
     }
   }
-  return { found: targetTracks.length, pending, uploaded, removed };
+  return { found: targetTracks.length, target: targetTracks, pending, uploaded, removed };
 }

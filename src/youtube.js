@@ -26,7 +26,8 @@ function run(command, args) {
 export async function listTracks(url, limit) {
   let result;
   try {
-    const args = ["--js-runtimes", "node", "--flat-playlist", "--dump-single-json", "--no-warnings"];
+    // ponytail: --flat-playlist is fast but omits upload_date/timestamp, so we can't sort by date.
+    const args = ["--js-runtimes", "node", "--dump-single-json", "--no-warnings"];
     if (limit) args.push("--playlist-end", String(limit));
     args.push(url);
     result = JSON.parse(await run("yt-dlp", args));

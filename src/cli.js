@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import { randomBytes } from "node:crypto";
 import { loadEnvFile } from "node:process";
 import { configPath, loadConfig, saveConfig } from "./storage.js";
-import { createYoto, listCards, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
+import { createYoto, listCards, listCardChapters, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
 import { downloadTrack, listTracks, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
 import { exchangeAuthorizationCode, savedTokens, startAuthorization, validTokens, waitForAuthorizationCode } from "./auth.js";
@@ -170,9 +170,9 @@ export async function main(args = process.argv.slice(2), environment = process.e
       maxStories,
       onDetected: (tracks, pending) => {
         const pendingIds = new Set(pending.map((track) => track.id));
-        console.log(`${name}: ${tracks.length} detected; ${tracks.length - pending.length} previously synced, ${pending.length} new; keeping ${maxStories} stories.`);
+        console.log(`${name}: ${tracks.length} selected; ${tracks.length - pending.length} already on card, ${pendingIds.size} to download; keeping ${maxStories} stories.`);
         console.table(tracks.map((track) => ({
-          status: pendingIds.has(track.id) ? "new" : "previously synced",
+          status: pendingIds.has(track.id) ? "download + add" : "keep on card",
           id: track.id,
           title: track.title,
         })));
@@ -180,7 +180,23 @@ export async function main(args = process.argv.slice(2), environment = process.e
       onUpdating: (track) => console.log(`Adding: ${track.title}`),
       onRemoved: (tracks) => console.log(`Removed oldest: ${tracks.map((track) => track.title).join(", ")}`),
     });
-    console.log(`${name}: ${result.uploaded.length} uploaded, ${result.removed.length} removed.`);
+    if (values["dry-run"]) {
+      const existingChapters = await listCardChapters(yoto, profile.cardId);
+      const existingIds = new Set(existingChapters.map((chapter) => chapter.key).filter(Boolean));
+      const targetIds = new Set(result.target.map((track) => track.id));
+      const toAdd = result.target.filter((track) => !existingIds.has(track.id));
+      const toRemove = existingChapters.filter((chapter) => chapter.key && !targetIds.has(chapter.key));
+      console.log("\nDry-run plan for " + name);
+      console.log("Tracks already on card: " + existingChapters.filter((c) => c.key && targetIds.has(c.key)).length);
+      console.log("Tracks to download and add: " + toAdd.length);
+      if (toAdd.length) console.table(toAdd.map((track) => ({ id: track.id, title: track.title })));
+      console.log("Tracks to remove from card: " + toRemove.length);
+      if (toRemove.length) console.table(toRemove.map((chapter) => ({ id: chapter.key, title: chapter.title || chapter.key })));
+      console.log("Final card would contain: " + result.target.length + " tracks");
+      console.table(result.target.map((track, index) => ({ position: index + 1, id: track.id, title: track.title })));
+    } else {
+      console.log(`${name}: ${result.uploaded.length} uploaded, ${result.removed.length} removed.`);
+    }
   }
 }
 

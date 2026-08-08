@@ -74,6 +74,7 @@ test("sync only processes the latest max-stories tracks", async () => {
   const result = await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, new Set(), services, { maxStories: 1 });
 
   assert.equal(result.found, 1);
+  assert.deepEqual(result.target.map((track) => track.id), ["new"]);
   assert.deepEqual(calls, ["new"]);
 });
 

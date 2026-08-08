@@ -19,6 +19,11 @@ export async function listCardTrackIds(yoto, cardId) {
   return cardChapters(card).map((chapter) => chapter.key).filter(Boolean);
 }
 
+export async function listCardChapters(yoto, cardId) {
+  const card = await findCard(yoto, cardId);
+  return cardChapters(card);
+}
+
 export async function uploadTrack(yoto, path) {
   const audio = await readFile(path);
   const sha256 = createHash("sha256").update(audio).digest("hex");

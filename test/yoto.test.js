@@ -3,7 +3,7 @@ import { rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import test from "node:test";
-import { addTrackToCard, listCardTrackIds, uploadTrack } from "../src/yoto.js";
+import { addTrackToCard, listCardChapters, listCardTrackIds, uploadTrack } from "../src/yoto.js";
 
 test("uploadTrack uses the documented Yoto media reference", async () => {
   const path = join(tmpdir(), `yoto-${Date.now()}.mp3`);
@@ -78,6 +78,16 @@ test("listCardTrackIds reads existing chapter keys", async () => {
   }, "card-1");
 
   assert.deepEqual(ids, ["old", "new"]);
+});
+
+test("listCardChapters returns full chapter objects", async () => {
+  const chapters = await listCardChapters({
+    content: {
+      getCard: async () => ({ cardId: "card-1", content: { chapters: [{ key: "old", title: "Old" }, { title: "Untitled" }] } }),
+    },
+  }, "card-1");
+
+  assert.deepEqual(chapters, [{ key: "old", title: "Old" }, { title: "Untitled" }]);
 });
 
 test("addTrackToCard refuses a card summary without chapters", async () => {
