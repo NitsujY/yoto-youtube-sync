@@ -8,7 +8,7 @@ function parseUploadDate(value) {
   return Date.UTC(Number(value.slice(0, 4)), Number(value.slice(4, 6)) - 1, Number(value.slice(6, 8))) / 1000;
 }
 
-function run(command, args) {
+function run(command, args, ignoreExitCode = false) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
@@ -17,7 +17,7 @@ function run(command, args) {
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.on("error", (error) => reject(new Error(`Could not run ${command}: ${error.message}`)));
     child.on("close", (code) => {
-      if (code === 0) return resolve(stdout);
+      if (code === 0 || ignoreExitCode) return resolve(stdout);
       reject(new Error(`${command} failed: ${stderr.trim() || `exit ${code}`}`));
     });
   });
@@ -27,10 +27,10 @@ export async function listTracks(url, limit) {
   let result;
   try {
     // ponytail: --flat-playlist is fast but omits upload_date/timestamp, so we can't sort by date.
-    const args = ["--js-runtimes", "node", "--dump-single-json", "--no-warnings"];
+    const args = ["--js-runtimes", "node", "--dump-single-json", "--no-warnings", "--ignore-errors"];
     if (limit) args.push("--playlist-end", String(limit));
     args.push(url);
-    result = JSON.parse(await run("yt-dlp", args));
+    result = JSON.parse(await run("yt-dlp", args, true));
   } catch (error) {
     throw new Error(`Could not read ${url}: ${error.message}`);
   }
