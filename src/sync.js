@@ -1,12 +1,15 @@
 export async function syncProfile(profile, knownIds, services, options = {}) {
+  const maxStories = options.maxStories ?? 20;
   const tracks = [];
   for (const source of profile.sources) {
     tracks.push(...await services.listTracks(source, options.limit));
   }
+  tracks.sort((a, b) => a.timestamp - b.timestamp);
+  const targetTracks = tracks.slice(-maxStories);
 
-  const pending = tracks.filter((track) => options.force || !knownIds.has(track.id));
-  await options.onDetected?.(tracks, pending);
-  if (options.dryRun) return { found: tracks.length, pending, uploaded: [], removed: [] };
+  const pending = targetTracks.filter((track) => options.force || !knownIds.has(track.id));
+  await options.onDetected?.(targetTracks, pending);
+  if (options.dryRun) return { found: targetTracks.length, pending, uploaded: [], removed: [] };
 
   const uploaded = [];
   const removed = [];
@@ -36,5 +39,5 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
       await services.removeDownload(path);
     }
   }
-  return { found: tracks.length, pending, uploaded, removed };
+  return { found: targetTracks.length, pending, uploaded, removed };
 }

@@ -3,6 +3,11 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+function parseUploadDate(value) {
+  if (!value || typeof value !== "string" || value.length !== 8) return 0;
+  return Date.UTC(Number(value.slice(0, 4)), Number(value.slice(4, 6)) - 1, Number(value.slice(6, 8))) / 1000;
+}
+
 function run(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -37,6 +42,7 @@ export async function listTracks(url, limit) {
       title: entry.title || entry.id,
       url: entry.webpage_url || entry.url,
       duration: Number(entry.duration) || 0,
+      timestamp: Number(entry.timestamp) || parseUploadDate(entry.upload_date) || 0,
     }));
 }
 

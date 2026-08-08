@@ -40,6 +40,43 @@ test("sync retries unavailable videos on later runs", async () => {
   assert.deepEqual([...knownIds], []);
 });
 
+test("sync sorts tracks by timestamp so max-stories keeps the newest", async () => {
+  const calls = [];
+  const services = {
+    listTracks: async () => [
+      { id: "new", title: "New", timestamp: 2000 },
+      { id: "old", title: "Old", timestamp: 1000 },
+    ],
+    downloadTrack: async (track) => `${track.id}.mp3`,
+    uploadTrack: async (path) => `yoto:#${path}`,
+    addTrackToCard: async (cardId, track) => { calls.push(track.id); return []; },
+    removeDownload: async () => {},
+  };
+
+  await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, new Set(), services);
+
+  assert.deepEqual(calls, ["old", "new"]);
+});
+
+test("sync only processes the latest max-stories tracks", async () => {
+  const calls = [];
+  const services = {
+    listTracks: async () => [
+      { id: "old", title: "Old", timestamp: 1000 },
+      { id: "new", title: "New", timestamp: 2000 },
+    ],
+    downloadTrack: async (track) => `${track.id}.mp3`,
+    uploadTrack: async (path) => `yoto:#${path}`,
+    addTrackToCard: async (cardId, track) => { calls.push(track.id); return []; },
+    removeDownload: async () => {},
+  };
+
+  const result = await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, new Set(), services, { maxStories: 1 });
+
+  assert.equal(result.found, 1);
+  assert.deepEqual(calls, ["new"]);
+});
+
 test("sync removes evicted stories from state", async () => {
   const knownIds = new Set(["old"]);
   const result = await syncProfile(
