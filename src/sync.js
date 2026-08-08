@@ -1,14 +1,23 @@
 export async function syncProfile(profile, knownIds, services, options = {}) {
   const maxStories = options.maxStories ?? 20;
+  const log = options.verbose ? (...messages) => console.log(...messages) : () => {};
   const tracks = [];
   for (const source of profile.sources) {
-    tracks.push(...await services.listTracks(source, options.limit));
+    tracks.push(...await services.listTracks(source, options.limit, options.verbose));
   }
-  tracks.sort((a, b) => a.timestamp - b.timestamp);
+  tracks.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
   const targetTracks = tracks.slice(-maxStories);
 
+  log(`[${profile.cardId}] fetched ${tracks.length} available track(s) from ${profile.sources.length} source(s)`);
+  if (tracks.length) {
+    const oldest = tracks[0];
+    const newest = tracks.at(-1);
+    log(`  oldest: ${oldest.title} (${new Date((oldest.timestamp || 0) * 1000).toISOString()})`);
+    log(`  newest: ${newest.title} (${new Date((newest.timestamp || 0) * 1000).toISOString()})`);
+  }
+
   const pending = targetTracks.filter((track) => options.force || !knownIds.has(track.id));
-  await options.onDetected?.(targetTracks, pending);
+  await options.onDetected?.(targetTracks, pending, tracks.length);
   if (options.dryRun) return { found: targetTracks.length, target: targetTracks, pending, uploaded: [], removed: [] };
 
   const uploaded = [];

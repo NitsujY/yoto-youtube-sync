@@ -32,7 +32,7 @@ Commands:
   config path | show                Show local configuration
 
 Options: --dry-run, --force, --limit <count>, --max-stories <count> (default: 20),
-         --help, --version`;
+         --verbose, --help, --version`;
 
 function fail(message) {
   throw new Error(message);
@@ -55,6 +55,7 @@ function optionsFor(args) {
       force: { type: "boolean" },
       limit: { type: "string" },
       "max-stories": { type: "string" },
+      verbose: { type: "boolean", short: "v" },
       code: { type: "string" },
       state: { type: "string" },
       help: { type: "boolean", short: "h" },
@@ -168,9 +169,10 @@ export async function main(args = process.argv.slice(2), environment = process.e
       force: values.force,
       limit,
       maxStories,
-      onDetected: (tracks, pending) => {
+      verbose: values.verbose,
+      onDetected: (tracks, pending, fetchedCount) => {
         const pendingIds = new Set(pending.map((track) => track.id));
-        console.log(`${name}: ${tracks.length} selected; ${tracks.length - pending.length} already on card, ${pendingIds.size} to download; keeping ${maxStories} stories.`);
+        console.log(`${name}: ${fetchedCount} fetched from source(s); ${tracks.length} selected; ${tracks.length - pending.length} already on card, ${pendingIds.size} to download; keeping ${maxStories} stories.`);
         console.table(tracks.map((track) => ({
           status: pendingIds.has(track.id) ? "download + add" : "keep on card",
           id: track.id,

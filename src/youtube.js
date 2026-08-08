@@ -23,7 +23,7 @@ function run(command, args, ignoreExitCode = false) {
   });
 }
 
-export async function listTracks(url, limit) {
+export async function listTracks(url, limit, verbose = false) {
   let result;
   try {
     // ponytail: --flat-playlist is fast but omits upload_date/timestamp, so we can't sort by date.
@@ -36,7 +36,7 @@ export async function listTracks(url, limit) {
   }
 
   const entries = result.entries || [result];
-  return entries
+  const tracks = entries
     .filter((entry) => entry?.id && (entry.webpage_url || entry.url))
     .map((entry) => ({
       id: entry.id,
@@ -45,6 +45,10 @@ export async function listTracks(url, limit) {
       duration: Number(entry.duration) || 0,
       timestamp: Number(entry.timestamp) || parseUploadDate(entry.upload_date) || 0,
     }));
+  if (verbose) {
+    console.log(`[listTracks] ${url}: yt-dlp returned ${entries.length} entries, kept ${tracks.length} usable tracks`);
+  }
+  return tracks;
 }
 
 export async function downloadTrack(track) {
