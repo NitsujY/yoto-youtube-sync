@@ -36,7 +36,7 @@ export async function listTracks(url, limit, verbose = false) {
     throw new Error(`Could not read ${url}: ${error.message}`);
   }
 
-  const entries = result.entries || [result];
+  const entries = result?.entries || (result ? [result] : []);
   const tracks = entries
     .filter((entry) => entry?.id && (entry.webpage_url || entry.url))
     .map((entry) => ({
@@ -50,6 +50,19 @@ export async function listTracks(url, limit, verbose = false) {
     console.log(`[listTracks] ${url}: yt-dlp returned ${entries.length} entries, kept ${tracks.length} usable tracks`);
   }
   return tracks;
+}
+
+// ponytail: flat probe returns IDs only (no timestamps) — enough to detect "nothing new" cheaply.
+// If any ID is unknown, callers fall back to the full listTracks fetch.
+export async function probeTrackIds(url, limit) {
+  const args = ["--flat-playlist", "--dump-single-json", "--no-warnings", "--ignore-errors"];
+  if (limit) args.push("--playlist-end", String(limit));
+  args.push(url);
+  const output = await run("yt-dlp", args, true);
+  const result = JSON.parse(output);
+  if (!result) throw new Error(`yt-dlp returned no data for ${url}`);
+  const entries = result.entries || [result];
+  return entries.filter((entry) => entry?.id).map((entry) => entry.id);
 }
 
 export async function downloadTrack(track) {

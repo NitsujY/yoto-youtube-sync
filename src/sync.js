@@ -1,6 +1,24 @@
 export async function syncProfile(profile, knownIds, services, options = {}) {
   const maxStories = options.maxStories ?? 20;
   const log = options.verbose ? (...messages) => console.log(...messages) : () => {};
+
+  // ponytail: cheap flat probe first — if every source ID is already on the card, skip the slow full fetch.
+  // Deliberate ceiling: ordering/removal changes without new IDs are ignored (sync never removes non-evicted tracks anyway).
+  if (!options.force && !options.dryRun && services.probeTrackIds) {
+    try {
+      const probed = [];
+      for (const source of profile.sources) {
+        probed.push(...await services.probeTrackIds(source, options.limit));
+      }
+      if (probed.length && probed.every((id) => knownIds.has(id))) {
+        log(`[${profile.cardId}] probe: all ${probed.length} source track(s) already on card, skipping full fetch`);
+        return { unchanged: true, found: 0, target: [], pending: [], uploaded: [], removed: [] };
+      }
+    } catch {
+      log(`[${profile.cardId}] probe failed, falling back to full fetch`);
+    }
+  }
+
   const tracks = [];
   for (const source of profile.sources) {
     tracks.push(...await services.listTracks(source, options.limit, options.verbose));

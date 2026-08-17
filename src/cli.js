@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { loadEnvFile } from "node:process";
 import { configPath, loadConfig, saveConfig } from "./storage.js";
 import { createYoto, listCards, listCardChapters, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
-import { downloadTrack, listTracks, removeDownload } from "./youtube.js";
+import { downloadTrack, listTracks, probeTrackIds, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
 import { exchangeAuthorizationCode, savedTokens, startAuthorization, validTokens, waitForAuthorizationCode } from "./auth.js";
 
@@ -156,6 +156,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
   if (!names.length) fail("Add a profile before syncing.");
   const services = {
     listTracks,
+    probeTrackIds,
     downloadTrack,
     uploadTrack: (path) => uploadTrack(yoto, path),
     addTrackToCard: (cardId, track, mediaUrl, maximum) => addTrackToCard(yoto, cardId, track, mediaUrl, maximum),
@@ -196,6 +197,8 @@ export async function main(args = process.argv.slice(2), environment = process.e
       if (toRemove.length) console.table(toRemove.map((chapter) => ({ id: chapter.key, title: chapter.title || chapter.key })));
       console.log("Final card would contain: " + result.target.length + " tracks");
       console.table(result.target.map((track, index) => ({ position: index + 1, id: track.id, title: track.title })));
+    } else if (result.unchanged) {
+      console.log(`${name}: up to date (probe found no new tracks, full fetch skipped).`);
     } else {
       console.log(`${name}: ${result.uploaded.length} uploaded, ${result.removed.length} removed.`);
     }
