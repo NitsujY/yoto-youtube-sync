@@ -8,7 +8,7 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
     try {
       const probed = [];
       for (const source of profile.sources) {
-        probed.push(...await services.probeTrackIds(source, options.limit));
+        probed.push(...await services.probeTrackIds(source, options.limit ?? maxStories));
       }
       if (probed.length && probed.every((id) => knownIds.has(id))) {
         log(`[${profile.cardId}] probe: all ${probed.length} source track(s) already on card, skipping full fetch`);
@@ -19,9 +19,11 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
     }
   }
 
+  // ponytail: fetch only the first maxStories entries — right for channels/playlists sorted newest-first.
+  // Ceiling: an oldest-first manual playlist never surfaces new videos; use --limit bigger than the playlist for a full fetch.
   const tracks = [];
   for (const source of profile.sources) {
-    tracks.push(...await services.listTracks(source, options.limit, options.verbose));
+    tracks.push(...await services.listTracks(source, options.limit ?? maxStories, options.verbose));
   }
   tracks.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
   const targetTracks = tracks.slice(-maxStories);

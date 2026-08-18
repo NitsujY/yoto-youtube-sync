@@ -10,7 +10,7 @@ test("PKCE authorization requests an offline token for the Yoto API", () => {
   assert.equal(url.pathname, "/authorize");
   assert.equal(url.searchParams.get("client_id"), "client-id");
   assert.equal(url.searchParams.get("audience"), "https://api.yotoplay.com");
-  assert.equal(url.searchParams.get("scope"), "family:library:manage family:library:view user:content:manage user:content:view offline_access");
+  assert.equal(url.searchParams.get("scope"), "family:library:manage family:library:view family:devices:view user:content:manage user:content:view offline_access");
   assert.equal(url.searchParams.get("response_type"), "code");
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
   assert.equal(url.searchParams.get("redirect_uri"), redirectUri);

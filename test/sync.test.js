@@ -95,3 +95,21 @@ test("sync removes evicted stories from state", async () => {
   assert.deepEqual(result.removed, [{ id: "old", title: "Old" }]);
   assert.deepEqual([...knownIds], ["new"]);
 });
+
+test("sync fetches only the newest max-stories entries by default", async () => {
+  const listed = [];
+  const probed = [];
+  const services = {
+    probeTrackIds: async (url, limit) => { probed.push(limit); return ["new"]; },
+    listTracks: async (url, limit) => { listed.push(limit); return [{ id: "new", title: "New", timestamp: 1 }]; },
+    downloadTrack: async () => "new.mp3",
+    uploadTrack: async () => "yoto:#new.mp3",
+    addTrackToCard: async () => [],
+    removeDownload: async () => {},
+  };
+
+  await syncProfile({ cardId: "c", sources: ["https://youtube.com/@x/videos"] }, new Set(), services, { maxStories: 5 });
+
+  assert.deepEqual(probed, [5]);
+  assert.deepEqual(listed, [5]);
+});

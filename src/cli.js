@@ -21,6 +21,7 @@ Commands:
   login start                       Begin HTTPS callback login using YOTO_REDIRECT_URI
   login complete --code CODE --state STATE
   cards                             List available Yoto cards
+  inspect [--profile <name>]        Show card chapters and flag expiring track URLs
   profile add <name> --card <id>    Add a card profile
   profile list | remove <name>      List or remove profiles
   add --profile <name> <url>        Add a YouTube video or playlist
@@ -145,6 +146,23 @@ export async function main(args = process.argv.slice(2), environment = process.e
   }
   const yoto = createYoto(auth.accessToken);
   if (command === "cards") return console.table(await listCards(yoto));
+  if (command === "inspect") {
+    const entries = values.profile ? [[values.profile, profileFor(config, values.profile)]] : Object.entries(config.profiles);
+    for (const [name, profile] of entries) {
+      console.log(`${name} (${profile.cardId}):`);
+      const chapters = await listCardChapters(yoto, profile.cardId);
+      console.table(chapters.map((chapter) => {
+        const trackUrl = chapter.tracks?.[0]?.trackUrl;
+        return {
+          key: chapter.key,
+          title: chapter.title,
+          trackUrl: trackUrl ?? "(missing)",
+          stable: trackUrl?.startsWith("yoto:#") ? "yes" : "NO — re-sync with --force",
+        };
+      }));
+    }
+    return;
+  }
   if (command !== "sync") fail(`Unknown command: ${command}`);
   if (values.all && values.profile) fail("Use either --all or --profile, not both.");
   if (values.limit && !/^[1-9]\d*$/.test(values.limit)) fail("Use a positive integer for --limit.");
