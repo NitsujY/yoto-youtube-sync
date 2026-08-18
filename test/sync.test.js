@@ -21,7 +21,7 @@ test("sync uploads only tracks not already in state", async () => {
 
   assert.deepEqual(result.uploaded.map((track) => track.id), ["new"]);
   assert.deepEqual(listed, [{ url: "https://youtube.com/playlist", limit: 10 }]);
-  assert.deepEqual(calls, [{ cardId: "card-1", track: { id: "new", title: "New" }, mediaUrl: "yoto:#new.mp3" }]);
+  assert.deepEqual(calls, [{ cardId: "card-1", track: { id: "new", title: "New", fileSize: 0 }, mediaUrl: "yoto:#new.mp3" }]);
   assert.deepEqual([...knownIds], ["old", "new"]);
 });
 

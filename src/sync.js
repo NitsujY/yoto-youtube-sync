@@ -1,3 +1,5 @@
+import { stat } from "node:fs/promises";
+
 export async function syncProfile(profile, knownIds, services, options = {}) {
   const maxStories = options.maxStories ?? 20;
   const log = options.verbose ? (...messages) => console.log(...messages) : () => {};
@@ -55,6 +57,8 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
       continue;
     }
     try {
+      // ponytail: real file size when available; stubs/tests get 0, Yoto doesn't validate it.
+      track.fileSize ??= await stat(path).then((s) => s.size).catch(() => 0);
       const mediaUrl = await services.uploadTrack(path);
       const evicted = await services.addTrackToCard(profile.cardId, track, mediaUrl, options.maxStories);
       const removedTracks = Array.isArray(evicted) ? evicted : [];

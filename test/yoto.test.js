@@ -62,12 +62,19 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
     },
   };
 
-  const removed = await addTrackToCard(yoto, "card-1", { id: "new", title: "New", duration: 10 }, "https://media.example/new");
+  const removed = await addTrackToCard(yoto, "card-1", { id: "new", title: "New", duration: 10, fileSize: 1234 }, "https://media.example/new");
 
   assert.deepEqual(removed, [{ id: "old-1", title: "Old 1" }]);
   assert.equal(updated.content.chapters.length, 20);
   assert.equal(updated.content.chapters[0].key, "old-2");
-  assert.equal(updated.content.chapters.at(-1).key, "new");
+  const added = updated.content.chapters.at(-1);
+  assert.equal(added.key, "new");
+  // schema-required fields the player firmware needs
+  assert.deepEqual(added.display, {});
+  assert.equal(added.defaultTrackDisplay, "");
+  assert.equal(added.tracks[0].uid, "new");
+  assert.equal(added.tracks[0].fileSize, 1234);
+  assert.equal(added.tracks[0].channels, "stereo");
 });
 
 test("listCardTrackIds reads existing chapter keys", async () => {
