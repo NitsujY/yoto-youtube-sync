@@ -157,6 +157,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
           key: chapter.key,
           title: chapter.title,
           trackUrl: trackUrl ?? "(missing)",
+          duration: chapter.tracks?.[0]?.duration ?? 0,
           stable: trackUrl?.startsWith("yoto:#") ? "yes" : "NO — re-sync with --force",
         };
       }));

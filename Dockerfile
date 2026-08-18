@@ -1,14 +1,16 @@
 FROM node:22-bookworm-slim
 
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip \
+    apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg python3-pip \
- && pip3 install --no-cache-dir --break-system-packages yt-dlp \
- && rm -rf /var/lib/apt/lists/*
+ && pip3 install --break-system-packages yt-dlp
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 COPY src ./src
 RUN npm link

@@ -2,19 +2,21 @@ FROM ghcr.io/windmill-labs/windmill:main
 
 USER root
 
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip \
+    apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl ffmpeg gnupg python3-pip \
  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
  && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends nodejs \
- && pip3 install --no-cache-dir --break-system-packages yt-dlp \
- && rm -rf /var/lib/apt/lists/*
+ && pip3 install --break-system-packages yt-dlp
 
 WORKDIR /opt/yoto-sync
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 COPY src ./src
 RUN npm link
