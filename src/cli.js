@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import { randomBytes } from "node:crypto";
 import { loadEnvFile } from "node:process";
 import { configPath, loadConfig, saveConfig } from "./storage.js";
-import { createYoto, listCards, listCardChapters, listCardTrackIds, addTrackToCard, uploadTrack } from "./yoto.js";
+import { createYoto, listCards, listCardChapters, cardTrackIds, getCard, addTrackToCard, uploadTrack } from "./yoto.js";
 import { downloadTrack, listTracks, probeTrackIds, removeDownload } from "./youtube.js";
 import { syncProfile } from "./sync.js";
 import { exchangeAuthorizationCode, savedTokens, startAuthorization, validTokens, waitForAuthorizationCode } from "./auth.js";
@@ -173,17 +173,18 @@ export async function main(args = process.argv.slice(2), environment = process.e
 
   const names = values.profile ? [values.profile] : Object.keys(config.profiles);
   if (!names.length) fail("Add a profile before syncing.");
-  const services = {
-    listTracks,
-    probeTrackIds,
-    downloadTrack,
-    uploadTrack: (path) => uploadTrack(yoto, path),
-    addTrackToCard: (cardId, track, mediaUrl, maximum) => addTrackToCard(yoto, cardId, track, mediaUrl, maximum),
-    removeDownload,
-  };
   for (const name of names) {
     const profile = profileFor(config, name);
-    const knownIds = new Set(await listCardTrackIds(yoto, profile.cardId));
+    const card = await getCard(yoto, profile.cardId);
+    const knownIds = new Set(cardTrackIds(card));
+    const services = {
+      listTracks,
+      probeTrackIds,
+      downloadTrack,
+      uploadTrack: (path) => uploadTrack(yoto, path),
+      addTrackToCard: (cardId, track, mediaUrl, maximum) => addTrackToCard(yoto, card, track, mediaUrl, maximum),
+      removeDownload,
+    };
     const result = await syncProfile(profile, knownIds, services, {
       dryRun: values["dry-run"],
       force: values.force,

@@ -15,12 +15,15 @@ export async function listCards(yoto) {
 }
 
 export async function listCardTrackIds(yoto, cardId) {
-  const card = await findCard(yoto, cardId);
+  return cardTrackIds(await getCard(yoto, cardId));
+}
+
+export function cardTrackIds(card) {
   return cardChapters(card).map((chapter) => chapter.key).filter(Boolean);
 }
 
 export async function listCardChapters(yoto, cardId) {
-  const card = await findCard(yoto, cardId);
+  const card = await getCard(yoto, cardId);
   return cardChapters(card);
 }
 
@@ -58,8 +61,9 @@ export async function uploadTrack(yoto, path) {
   throw new Error("Timed out waiting for Yoto to transcode the uploaded audio.");
 }
 
-export async function addTrackToCard(yoto, cardId, track, mediaUrl, maxStories = 20) {
-  const card = await findCard(yoto, cardId);
+// ponytail: card is fetched once per sync run and mutated locally — re-fetching between adds races Yoto's
+// eventually-consistent updateCard and silently drops chapters (server dedupes duplicate keys).
+export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 20) {
   const chapters = cardChapters(card);
   const chapter = {
     title: track.title,
@@ -86,17 +90,19 @@ export async function addTrackToCard(yoto, cardId, track, mediaUrl, maxStories =
   const updatedChapters = [...chapters, chapter];
   const removedChapters = updatedChapters.slice(0, -maxStories);
 
+  const kept = updatedChapters.slice(-maxStories);
   await yoto.content.updateCard({
     ...card,
-    cardId,
-    content: { ...card.content, chapters: updatedChapters.slice(-maxStories) },
+    cardId: card.cardId,
+    content: { ...card.content, chapters: kept },
   });
+  card.content.chapters = kept;
   return removedChapters
     .filter((chapter) => chapter.key)
     .map((chapter) => ({ id: chapter.key, title: chapter.title || chapter.key }));
 }
 
-async function findCard(yoto, cardId) {
+export async function getCard(yoto, cardId) {
   const card = await yoto.content.getCard(cardId);
   if (!card) throw new Error(`Yoto card ${cardId} was not found.`);
   return card;

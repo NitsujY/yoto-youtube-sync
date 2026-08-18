@@ -55,14 +55,14 @@ test("uploadTrack uploads to the SDK's URL field", async () => {
 test("addTrackToCard keeps the newest 20 stories", async () => {
   let updated;
   const chapters = Array.from({ length: 20 }, (_, index) => ({ key: `old-${index + 1}`, title: `Old ${index + 1}` }));
+  const card = { cardId: "card-1", content: { chapters } };
   const yoto = {
     content: {
-      getCard: async () => ({ cardId: "card-1", content: { chapters } }),
       updateCard: async (card) => { updated = card; },
     },
   };
 
-  const removed = await addTrackToCard(yoto, "card-1", { id: "new", title: "New", duration: 10, fileSize: 1234 }, "https://media.example/new");
+  const removed = await addTrackToCard(yoto, card, { id: "new", title: "New", duration: 10, fileSize: 1234 }, "https://media.example/new");
 
   assert.deepEqual(removed, [{ id: "old-1", title: "Old 1" }]);
   assert.equal(updated.content.chapters.length, 20);
@@ -101,10 +101,20 @@ test("addTrackToCard refuses a card summary without chapters", async () => {
   await assert.rejects(
     addTrackToCard({
       content: {
-        getCard: async () => ({ cardId: "card-1", content: {} }),
         updateCard: async () => assert.fail("must not overwrite a card without chapters"),
       },
-    }, "card-1", { id: "new", title: "New", duration: 10 }, "yoto:#media-id"),
+    }, { cardId: "card-1", content: {} }, { id: "new", title: "New", duration: 10 }, "yoto:#media-id"),
     /did not include chapters/,
   );
+});
+
+test("sequential adds on one card object keep every new chapter", async () => {
+  const updates = [];
+  const card = { cardId: "card-1", content: { chapters: [{ key: "a", title: "A" }] } };
+  const yoto = { content: { updateCard: async (c) => updates.push(c.content.chapters.map((ch) => ch.key)) } };
+
+  await addTrackToCard(yoto, card, { id: "b", title: "B", duration: 1 }, "yoto:#b");
+  await addTrackToCard(yoto, card, { id: "c", title: "C", duration: 1 }, "yoto:#c");
+
+  assert.deepEqual(updates, [["a", "b"], ["a", "b", "c"]]);
 });
