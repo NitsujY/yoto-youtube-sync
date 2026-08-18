@@ -113,7 +113,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
     if (action === "list") return console.table(Object.entries(config.profiles).map(([name, profile]) => ({ name, cardId: profile.cardId, sources: profile.sources.length })));
     if (action === "add") {
       if (!value || !values.card) fail("Use `profile add <name> --card <id>`.");
-      config.profiles[value] = { cardId: values.card, sources: [] };
+      config.profiles[value] = { cardId: values.card, sources: config.profiles[value]?.sources ?? [] };
       await saveConfig(config);
       return console.log(`Added profile ${value}`);
     }
