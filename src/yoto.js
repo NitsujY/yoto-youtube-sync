@@ -68,23 +68,27 @@ export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 2
   const chapter = {
     title: track.title,
     key: track.id,
-    // ponytail: schema-required fields below — the app tolerates their absence, player firmware doesn't.
-    display: {},
-    defaultTrackDisplay: "",
-    defaultTrackAmbient: "",
+    // ponytail: fields below match Yoto's own zod schema + working MYO cards — the app tolerates their
+    // absence, player firmware doesn't. Server recomputes duration/fileSize from the transcoded file.
+    overlayLabel: String(chapters.length + 1),
+    display: { icon16x16: null },
+    hasStreams: false,
+    defaultTrackDisplay: null,
+    defaultTrackAmbient: null,
     duration: track.duration,
-    fileSize: track.fileSize || 0, // ponytail: pre-transcode mp3 size; Yoto doesn't validate it against the transcoded file.
+    fileSize: track.fileSize || 0,
     tracks: [{
       title: track.title,
       key: track.id,
-      uid: track.id,
       trackUrl: mediaUrl,
+      overlayLabel: "1",
       duration: track.duration,
       fileSize: track.fileSize || 0,
       format: "aac",
       type: "audio",
       channels: "stereo",
-      display: {},
+      display: { icon16x16: null },
+      hasStreams: false,
     }],
   };
   const updatedChapters = [...chapters, chapter];
