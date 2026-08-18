@@ -68,11 +68,17 @@ export async function probeTrackIds(url, limit) {
 export async function downloadTrack(track) {
   const directory = await mkdir(join(tmpdir(), "yoto-sync"), { recursive: true }).then(() => join(tmpdir(), "yoto-sync"));
   const path = join(directory, `${track.id}.mp3`);
-  await run("yt-dlp", ["--js-runtimes", "node", "--remote-components", "ejs:github", "--extractor-args", "youtube:player_client=android", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
-  const taggedPath = `${path}.tagged.mp3`;
-  await run("ffmpeg", ["-y", "-i", path, "-map", "0:a", "-c", "copy", "-metadata", "comment=yoto-sync-v2", taggedPath]);
-  await rename(taggedPath, path);
-  return path;
+  try {
+    await run("yt-dlp", ["--js-runtimes", "node", "--remote-components", "ejs:github", "--extractor-args", "youtube:player_client=android", "--no-playlist", "--no-warnings", "-x", "--audio-format", "mp3", "--output", path, track.url]);
+    const taggedPath = `${path}.tagged.mp3`;
+    await run("ffmpeg", ["-y", "-i", path, "-map", "0:a", "-c", "copy", "-metadata", "comment=yoto-sync-v2", taggedPath]);
+    await rename(taggedPath, path);
+    return path;
+  } catch (error) {
+    await rm(path, { force: true });
+    await rm(`${path}.tagged.mp3`, { force: true });
+    throw error;
+  }
 }
 
 export async function removeDownload(path) {
