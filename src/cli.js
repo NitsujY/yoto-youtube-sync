@@ -71,6 +71,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
   const [command, action, value] = positionals;
   if (values.version) return console.log("0.1.0");
   if (values.help || !command) return console.log(help);
+  console.log(`yoto-sync ${process.env.YOTO_SYNC_SHA?.slice(0, 7) || "dev"}`);
 
   const config = await loadConfig();
   if (command === "init" || command === "login") {

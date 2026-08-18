@@ -34,6 +34,7 @@ jobs:
           # ponytail: amd64 only — arm64 QEMU emulates apt/pip and turns uncached builds into 12-15min.
           # Add `platforms: linux/amd64,linux/arm64` back when someone actually pulls onto ARM.
           tags: ghcr.io/nitsujy/yoto-sync:latest
+          build-args: GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=yoto-sync
           cache-to: type=gha,mode=max,scope=yoto-sync
       - uses: docker/build-push-action@v6
@@ -43,5 +44,6 @@ jobs:
           push: true
           tags: ghcr.io/nitsujy/yoto-sync-worker:latest
           # ponytail: amd64 only, see above
+          build-args: GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=yoto-sync-worker
           cache-to: type=gha,mode=max,scope=yoto-sync-worker

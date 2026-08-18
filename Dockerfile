@@ -9,6 +9,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 WORKDIR /app
 
+ARG GIT_SHA=dev
+ENV YOTO_SYNC_SHA=$GIT_SHA
+
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
