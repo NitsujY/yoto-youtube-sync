@@ -6,7 +6,7 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
 
   // ponytail: cheap flat probe first — if every source ID is already on the card, skip the slow full fetch.
   // Deliberate ceiling: ordering/removal changes without new IDs are ignored (sync never removes non-evicted tracks anyway).
-  if (!options.force && !options.dryRun && services.probeTrackIds) {
+  if (!options.force && !options.dryRun && !options.filter && services.probeTrackIds) {
     try {
       const probed = [];
       for (const source of profile.sources) {
@@ -23,10 +23,17 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
 
   // ponytail: fetch only the first maxStories entries — right for channels/playlists sorted newest-first.
   // Ceiling: an oldest-first manual playlist never surfaces new videos; use --limit bigger than the playlist for a full fetch.
-  const tracks = [];
+  let tracks = [];
   for (const source of profile.sources) {
     tracks.push(...await services.listTracks(source, options.limit ?? maxStories, options.verbose));
   }
+
+  // ponytail: case-insensitive title filter; regex or multi-term query if needed later.
+  if (options.filter) {
+    const term = options.filter.toLowerCase();
+    tracks = tracks.filter((track) => track.title?.toLowerCase().includes(term));
+  }
+
   tracks.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
   const targetTracks = tracks.slice(-maxStories);
 

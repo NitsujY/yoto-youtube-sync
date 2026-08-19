@@ -27,13 +27,13 @@ Commands:
   add --profile <name> <url>        Add a YouTube video or playlist
   remove --profile <name> <url>     Remove a source
   sources --profile <name>          List sources
-  sync [--profile <name>|--all] [--limit <count>]
+  sync [--profile <name>|--all] [--limit <count>] [--filter <text>]
                                     Sync one or all profiles
   status [--profile <name>]         Show configured profiles
   config path | show                Show local configuration
 
-Options: --dry-run, --force, --limit <count>, --max-stories <count> (default: 20),
-         --verbose, --help, --version`;
+Options: --dry-run, --force, --filter <text>, --limit <count>,
+         --max-stories <count> (default: 20), --verbose, --help, --version`;
 
 function fail(message) {
   throw new Error(message);
@@ -54,6 +54,7 @@ function optionsFor(args) {
       all: { type: "boolean" },
       "dry-run": { type: "boolean" },
       force: { type: "boolean" },
+      filter: { type: "string" },
       limit: { type: "string" },
       "max-stories": { type: "string" },
       verbose: { type: "boolean", short: "v" },
@@ -189,6 +190,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
     const result = await syncProfile(profile, knownIds, services, {
       dryRun: values["dry-run"],
       force: values.force,
+      filter: values.filter,
       limit,
       maxStories,
       verbose: values.verbose,
