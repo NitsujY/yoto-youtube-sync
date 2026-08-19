@@ -73,7 +73,7 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
   assert.deepEqual(added.display, { icon16x16: null });
   assert.equal(added.overlayLabel, "21");
   assert.equal(added.hasStreams, false);
-  assert.equal(added.tracks[0].overlayLabel, "1");
+  assert.equal(added.tracks[0].overlayLabel, "21");
   assert.equal(added.tracks[0].fileSize, 1234);
   assert.equal(added.tracks[0].channels, "stereo");
 });

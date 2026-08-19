@@ -81,10 +81,10 @@ export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 2
       title: track.title,
       key: track.id,
       trackUrl: mediaUrl,
-      overlayLabel: "1",
+      overlayLabel: String(chapters.length + 1), // ponytail: global track number across the card, per Yoto's examples
       duration: track.duration,
       fileSize: track.fileSize || 0,
-      format: "aac",
+      format: "opus",
       type: "audio",
       channels: "stereo",
       display: { icon16x16: null },
