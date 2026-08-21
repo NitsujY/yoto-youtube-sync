@@ -3,7 +3,7 @@ import { rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import test from "node:test";
-import { addTrackToCard, listCardChapters, listCardTrackIds, uploadTrack } from "../src/yoto.js";
+import { addTrackToCard, listCardChapters, listCardTrackIds, reorderCard, uploadTrack } from "../src/yoto.js";
 
 test("uploadTrack uses the documented Yoto media reference", async () => {
   const path = join(tmpdir(), `yoto-${Date.now()}.mp3`);
@@ -100,6 +100,27 @@ test("addTrackToCard places oldest story at smaller chapter number when targetId
   assert.equal(updated.content.chapters[0].key, "old-story");
   assert.equal(updated.content.chapters[0].overlayLabel, "1");
   assert.equal(updated.content.chapters[1].key, "new-story");
+  assert.equal(updated.content.chapters[1].overlayLabel, "2");
+});
+
+test("reorderCard reorders existing card chapters and renumbers them 1..N", async () => {
+  let updated;
+  const chapters = [
+    { key: "ep35", title: "EP35", overlayLabel: "7" },
+    { key: "ep26", title: "EP26", overlayLabel: "15" },
+  ];
+  const card = { cardId: "card-1", content: { chapters } };
+  const yoto = {
+    content: {
+      updateCard: async (c) => { updated = c; },
+    },
+  };
+
+  await reorderCard(yoto, card, ["ep26", "ep35"], 20);
+
+  assert.equal(updated.content.chapters[0].key, "ep26");
+  assert.equal(updated.content.chapters[0].overlayLabel, "1");
+  assert.equal(updated.content.chapters[1].key, "ep35");
   assert.equal(updated.content.chapters[1].overlayLabel, "2");
 });
 

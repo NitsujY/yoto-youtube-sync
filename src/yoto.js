@@ -92,7 +92,8 @@ export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 2
   const updatedChapters = [...chapters.filter((c) => c.key !== track.id), chapter];
   if (targetIds?.length) {
     const orderMap = new Map(targetIds.map((id, index) => [id, index]));
-    updatedChapters.sort((a, b) => (orderMap.get(a.key) ?? Infinity) - (orderMap.get(b.key) ?? Infinity));
+    const pos = (key) => (key && orderMap.has(key) ? orderMap.get(key) : Number.MAX_SAFE_INTEGER);
+    updatedChapters.sort((a, b) => pos(a.key) - pos(b.key));
   }
   const removedChapters = updatedChapters.slice(0, -maxStories);
 
@@ -114,6 +115,43 @@ export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 2
     content: { ...card.content, chapters: kept },
   });
   card.content.chapters = kept;
+  return removedChapters
+    .filter((chapter) => chapter.key)
+    .map((chapter) => ({ id: chapter.key, title: chapter.title || chapter.key }));
+}
+
+export async function reorderCard(yoto, card, targetIds, maxStories = 20) {
+  const chapters = cardChapters(card);
+  if (!targetIds?.length || !chapters.length) return [];
+
+  const orderMap = new Map(targetIds.map((id, index) => [id, index]));
+  const pos = (key) => (key && orderMap.has(key) ? orderMap.get(key) : Number.MAX_SAFE_INTEGER);
+  const sorted = [...chapters].sort((a, b) => pos(a.key) - pos(b.key));
+  const removedChapters = sorted.slice(0, -maxStories);
+  const kept = sorted.slice(-maxStories);
+
+  let changed = kept.length !== chapters.length;
+  kept.forEach((ch, index) => {
+    const label = String(index + 1);
+    if (ch.overlayLabel !== label || ch.key !== chapters[index]?.key) changed = true;
+    ch.overlayLabel = label;
+    if (Array.isArray(ch.tracks)) {
+      for (const t of ch.tracks) {
+        if (t.overlayLabel !== label) changed = true;
+        t.overlayLabel = label;
+      }
+    }
+  });
+
+  if (changed) {
+    await yoto.content.updateCard({
+      ...card,
+      cardId: card.cardId,
+      content: { ...card.content, chapters: kept },
+    });
+    card.content.chapters = kept;
+  }
+
   return removedChapters
     .filter((chapter) => chapter.key)
     .map((chapter) => ({ id: chapter.key, title: chapter.title || chapter.key }));

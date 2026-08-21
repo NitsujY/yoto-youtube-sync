@@ -80,5 +80,12 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
       await services.removeDownload(path);
     }
   }
+  if (!options.dryRun && services.reorderCard) {
+    const evicted = await services.reorderCard(profile.cardId, targetTracks.map((t) => t.id), options.maxStories);
+    const removedTracks = Array.isArray(evicted) ? evicted : [];
+    for (const oldTrack of removedTracks) knownIds.delete(oldTrack.id);
+    removed.push(...removedTracks);
+    if (removedTracks.length) await options.onRemoved?.(removedTracks);
+  }
   return { found: targetTracks.length, target: targetTracks, pending, uploaded, removed };
 }
