@@ -71,11 +71,36 @@ test("addTrackToCard keeps the newest 20 stories", async () => {
   assert.equal(added.key, "new");
   // schema-required fields the player firmware needs
   assert.deepEqual(added.display, { icon16x16: null });
-  assert.equal(added.overlayLabel, "21");
+  assert.equal(added.overlayLabel, "20");
   assert.equal(added.hasStreams, false);
-  assert.equal(added.tracks[0].overlayLabel, "21");
+  assert.equal(added.tracks[0].overlayLabel, "20");
   assert.equal(added.tracks[0].fileSize, 1234);
   assert.equal(added.tracks[0].channels, "stereo");
+});
+
+test("addTrackToCard places oldest story at smaller chapter number when targetIds provided", async () => {
+  let updated;
+  const chapters = [{ key: "new-story", title: "New Story" }];
+  const card = { cardId: "card-1", content: { chapters } };
+  const yoto = {
+    content: {
+      updateCard: async (c) => { updated = c; },
+    },
+  };
+
+  await addTrackToCard(
+    yoto,
+    card,
+    { id: "old-story", title: "Old Story", duration: 5 },
+    "yoto:#old",
+    20,
+    ["old-story", "new-story"],
+  );
+
+  assert.equal(updated.content.chapters[0].key, "old-story");
+  assert.equal(updated.content.chapters[0].overlayLabel, "1");
+  assert.equal(updated.content.chapters[1].key, "new-story");
+  assert.equal(updated.content.chapters[1].overlayLabel, "2");
 });
 
 test("listCardTrackIds reads existing chapter keys", async () => {

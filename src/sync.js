@@ -21,11 +21,12 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
     }
   }
 
-  // ponytail: fetch only the first maxStories entries — right for channels/playlists sorted newest-first.
+  // ponytail: fetch only the first maxStories entries by default — but when filtering, fetch without capping to maxStories so non-matching videos don't starve the selection.
   // Ceiling: an oldest-first manual playlist never surfaces new videos; use --limit bigger than the playlist for a full fetch.
   let tracks = [];
+  const fetchLimit = options.filter ? options.limit : (options.limit ?? maxStories);
   for (const source of profile.sources) {
-    tracks.push(...await services.listTracks(source, options.limit ?? maxStories, options.verbose));
+    tracks.push(...await services.listTracks(source, fetchLimit, options.verbose));
   }
 
   // ponytail: case-insensitive title filter; regex or multi-term query if needed later.
@@ -67,7 +68,7 @@ export async function syncProfile(profile, knownIds, services, options = {}) {
       // ponytail: real file size when available; stubs/tests get 0, Yoto doesn't validate it.
       track.fileSize ??= await stat(path).then((s) => s.size).catch(() => 0);
       const mediaUrl = await services.uploadTrack(path);
-      const evicted = await services.addTrackToCard(profile.cardId, track, mediaUrl, options.maxStories);
+      const evicted = await services.addTrackToCard(profile.cardId, track, mediaUrl, options.maxStories, targetTracks.map((t) => t.id));
       const removedTracks = Array.isArray(evicted) ? evicted : [];
       for (const oldTrack of removedTracks) knownIds.delete(oldTrack.id);
       removed.push(...removedTracks);

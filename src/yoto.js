@@ -63,14 +63,13 @@ export async function uploadTrack(yoto, path) {
 
 // ponytail: card is fetched once per sync run and mutated locally — re-fetching between adds races Yoto's
 // eventually-consistent updateCard and silently drops chapters (server dedupes duplicate keys).
-export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 20) {
+export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 20, targetIds = null) {
   const chapters = cardChapters(card);
   const chapter = {
     title: track.title,
     key: track.id,
     // ponytail: fields below match Yoto's own zod schema + working MYO cards — the app tolerates their
     // absence, player firmware doesn't. Server recomputes duration/fileSize from the transcoded file.
-    overlayLabel: String(chapters.length + 1),
     display: { icon16x16: null },
     hasStreams: false,
     defaultTrackDisplay: null,
@@ -81,7 +80,6 @@ export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 2
       title: track.title,
       key: track.id,
       trackUrl: mediaUrl,
-      overlayLabel: String(chapters.length + 1), // ponytail: global track number across the card, per Yoto's examples
       duration: track.duration,
       fileSize: track.fileSize || 0,
       format: "opus",
@@ -91,10 +89,25 @@ export async function addTrackToCard(yoto, card, track, mediaUrl, maxStories = 2
       hasStreams: false,
     }],
   };
-  const updatedChapters = [...chapters, chapter];
+  const updatedChapters = [...chapters.filter((c) => c.key !== track.id), chapter];
+  if (targetIds?.length) {
+    const orderMap = new Map(targetIds.map((id, index) => [id, index]));
+    updatedChapters.sort((a, b) => (orderMap.get(a.key) ?? Infinity) - (orderMap.get(b.key) ?? Infinity));
+  }
   const removedChapters = updatedChapters.slice(0, -maxStories);
 
   const kept = updatedChapters.slice(-maxStories);
+  // ponytail: renumber 1..N in chronological order so older stories get smaller track numbers.
+  kept.forEach((ch, index) => {
+    const label = String(index + 1);
+    ch.overlayLabel = label;
+    if (Array.isArray(ch.tracks)) {
+      for (const t of ch.tracks) {
+        t.overlayLabel = label;
+      }
+    }
+  });
+
   await yoto.content.updateCard({
     ...card,
     cardId: card.cardId,

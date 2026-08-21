@@ -114,22 +114,27 @@ test("sync fetches only the newest max-stories entries by default", async () => 
   assert.deepEqual(listed, [5]);
 });
 
-test("sync filters tracks by title case-insensitively", async () => {
+test("sync filters tracks by title case-insensitively without starving maxStories fetch", async () => {
+  const listed = [];
   const calls = [];
   const services = {
-    listTracks: async () => [
-      { id: "1", title: "EP 1: Intro", timestamp: 1000 },
-      { id: "2", title: "Trailer", timestamp: 2000 },
-      { id: "3", title: "ep 2: Story", timestamp: 3000 },
-    ],
+    listTracks: async (url, limit) => {
+      listed.push(limit);
+      return [
+        { id: "1", title: "EP 1", timestamp: 1000 },
+        { id: "2", title: "Trailer", timestamp: 2000 },
+        { id: "3", title: "EP 2", timestamp: 3000 },
+      ];
+    },
     downloadTrack: async (track) => `${track.id}.mp3`,
     uploadTrack: async (path) => `yoto:#${path}`,
     addTrackToCard: async (cardId, track) => { calls.push(track.id); return []; },
     removeDownload: async () => {},
   };
 
-  const result = await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, new Set(), services, { filter: "EP" });
+  const result = await syncProfile({ cardId: "card-1", sources: ["https://youtube.com/playlist"] }, new Set(), services, { filter: "EP", maxStories: 2 });
 
+  assert.equal(listed[0], undefined);
   assert.equal(result.found, 2);
   assert.deepEqual(result.target.map((track) => track.id), ["1", "3"]);
   assert.deepEqual(calls, ["1", "3"]);

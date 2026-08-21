@@ -184,7 +184,7 @@ export async function main(args = process.argv.slice(2), environment = process.e
       probeTrackIds,
       downloadTrack,
       uploadTrack: (path) => uploadTrack(yoto, path),
-      addTrackToCard: (cardId, track, mediaUrl, maximum) => addTrackToCard(yoto, card, track, mediaUrl, maximum),
+      addTrackToCard: (cardId, track, mediaUrl, maximum, targetIds) => addTrackToCard(yoto, card, track, mediaUrl, maximum, targetIds),
       removeDownload,
     };
     const result = await syncProfile(profile, knownIds, services, {
